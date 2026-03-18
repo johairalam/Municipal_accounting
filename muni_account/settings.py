@@ -9,8 +9,8 @@ import pdfkit  # <-- add this
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-^b1eun5uhk!4mxq1o@w-6w39pgf^349a5d&kk++yjpw=22x*$m'
-DEBUG = False
-ALLOWED_HOSTS = ["municipal-accounting.up.railway.app"]
+DEBUG = True
+ALLOWED_HOSTS = ["*"]
 CSRF_TRUSTED_ORIGINS = ["https://municipal-accounting.up.railway.app"]
 
 
