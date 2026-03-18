@@ -20,8 +20,13 @@ SECRET_KEY = os.environ.get(
 
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-# Local: empty list; Railway: from env or *
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",") if os.environ.get("ALLOWED_HOSTS") else []
+# Local: empty list; Railway: from env or explicit host
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "municipal-accounting.up.railway.app",
+]
+
 
 
 # ========= APPS =========
