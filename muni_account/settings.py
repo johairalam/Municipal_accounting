@@ -95,7 +95,12 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # ===== pdfkit / wkhtmltopdf configuration =====
-# Adjust this path if wkhtmltopdf is installed elsewhere on your machine.
-WKHTMLTOPDF_CMD = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+WKHTMLTOPDF_CMD = os.environ.get("WKHTMLTOPDF_CMD")
 
-PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf=WKHTMLTOPDF_CMD)
+PDFKIT_CONFIG = None
+if WKHTMLTOPDF_CMD:
+    try:
+        PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf=WKHTMLTOPDF_CMD)
+    except OSError:
+        PDFKIT_CONFIG = None
+
