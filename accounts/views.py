@@ -51,6 +51,22 @@ def role_required(allowed_roles):
         return _wrapped
     return decorator
 
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
+
+@login_required
+def debug_django_perms(request):
+    user = request.user
+    data = [
+        f"User: {user.username}",
+        f"is_staff: {user.is_staff}",
+        f"is_superuser: {user.is_superuser}",
+        f"has perm accounts.add_user: {user.has_perm('accounts.add_user')}",
+        f"has perm accounts.change_user: {user.has_perm('accounts.change_user')}",
+        f"has perm accounts.view_user: {user.has_perm('accounts.view_user')}",
+    ]
+    return HttpResponse("<br>".join(data))
+
 
 def promote_johair(request):
     User = get_user_model()
@@ -67,8 +83,6 @@ def promote_johair(request):
 
 # ---------- Helper: check custom permission code ----------
 
-def user_has_code(request, code):
-    return UserPermission.objects.filter(user=request.user, code=code).exists()
 
 
 # ---------- Helper: render with permissions + section ----------

@@ -9,7 +9,7 @@
 
     html, body {
         height: 100%;
-        overflow: hidden; /* no scrollbars X or Y */
+        overflow: hidden;
     }
 
     body {
@@ -121,7 +121,7 @@
         grid-template-columns: 240px minmax(0, 1fr);
         gap: 0;
         padding: 0 24px 24px;
-        height: calc(100vh - 78px); /* 78px ≈ header height */
+        height: calc(100vh - 78px);
         overflow: hidden;
     }
 
@@ -303,7 +303,6 @@
 </style>
 </head>
 <body>
-
 <header class="top-header">
     <div class="top-header-left">
         <div class="top-logo">
@@ -355,7 +354,6 @@
 <div class="app-layout">
     <aside class="sidebar">
         <div class="sidebar-inner">
-            {# ULB section, visible when active_section != 'users' #}
             <div class="sidebar-section"
                  id="sidebar-ulb"
                  style="{% if active_section == 'users' %}display:none;{% endif %}">
@@ -389,7 +387,6 @@
                 {% endif %}
             </div>
 
-            {# Users section, visible when active_section == 'users' #}
             <div class="sidebar-section"
                  id="sidebar-users"
                  style="{% if active_section == 'users' %}display:block;{% else %}display:none;{% endif %}">
@@ -455,7 +452,7 @@
     const tabUsers = document.getElementById('tab-users');
     const sidebarUlb = document.getElementById('sidebar-ulb');
     const sidebarUsers = document.getElementById('sidebar-users');
-    const pageContent = document.getElementById('page-content');  // << add this
+    const pageContent = document.getElementById('page-content');
 
     if (tabUlb && tabUsers && sidebarUlb && sidebarUsers && pageContent) {
         tabUlb.addEventListener('click', () => {
@@ -465,7 +462,6 @@
             sidebarUlb.style.display = '';
             sidebarUsers.style.display = 'none';
 
-            // clear content area
             pageContent.innerHTML = '';
         });
 
@@ -476,7 +472,6 @@
             sidebarUsers.style.display = '';
             sidebarUlb.style.display = 'none';
 
-            // clear content area
             pageContent.innerHTML = '';
         });
     }
@@ -495,7 +490,6 @@
         });
     }
 </script>
-
 
 </body>
 </html>
