@@ -6,6 +6,7 @@ from pathlib import Path
 import os
 import pdfkit
 import dj_database_url
+
 USE_WEASYPRINT = os.environ.get("USE_WEASYPRINT", "True") == "True"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -115,3 +116,8 @@ if USE_PDFKIT:
         PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf=WKHTMLTOPDF_CMD)
     except Exception:
         PDFKIT_CONFIG = None
+
+# CSRF trusted origins for Railway
+CSRF_TRUSTED_ORIGINS = [
+    "https://municipal-accounting.up.railway.app",
+]
