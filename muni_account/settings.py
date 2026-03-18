@@ -1,11 +1,12 @@
 """
 Django settings for muni_account project.
 """
-USE_WEASYPRINT = os.environ.get("USE_WEASYPRINT", "True") == "True"
+
 from pathlib import Path
 import os
 import pdfkit
 import dj_database_url
+USE_WEASYPRINT = os.environ.get("USE_WEASYPRINT", "True") == "True"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
