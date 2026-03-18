@@ -150,9 +150,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 # Let WhiteNoise compress static files
 STORAGES = {
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
+
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
