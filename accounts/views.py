@@ -32,6 +32,9 @@ from .models import (Transaction, TransactionEntry, ReceiptUCDetails, PaymentVen
 from django.db.models import F, Q, Min    
 
 
+
+
+
 # ---------- Role decorator ----------
 
 def role_required(allowed_roles):
@@ -48,6 +51,19 @@ def role_required(allowed_roles):
         return _wrapped
     return decorator
 
+
+def setup_superuser(request):
+    User = get_user_model()
+
+    if User.objects.filter(username="admin").exists():
+        return HttpResponse("Admin user already exists.", status=200)
+
+    User.objects.create_superuser(
+        username="admin",
+        email="admin@example.com",
+        password="Admin@123",
+    )
+    return HttpResponse("Admin user created.", status=200)
 
 # ---------- Helper: check custom permission code ----------
 
