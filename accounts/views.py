@@ -10486,7 +10486,7 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Sum, DecimalField, Sum as Sum2
 from django.template.loader import get_template
-from weasyprint import HTML
+#from weasyprint import HTML
 # ... your other imports ...
 
 def format_indian(num):
