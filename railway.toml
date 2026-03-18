@@ -1,5 +1,0 @@
-[build]
-builder = "Python"
-
-[deploy]
-startCommand = "gunicorn muni_account.wsgi --log-file -"
