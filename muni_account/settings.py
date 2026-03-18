@@ -1,7 +1,7 @@
 """
 Django settings for muni_account project.
 """
-
+USE_WEASYPRINT = os.environ.get("USE_WEASYPRINT", "True") == "True"
 from pathlib import Path
 import os
 import pdfkit

@@ -10486,7 +10486,7 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Sum, DecimalField, Sum as Sum2
 from django.template.loader import get_template
-from weasyprint import HTML
+from django.conf import settings
 # ... your other imports ...
 
 def format_indian(num):
@@ -10511,7 +10511,6 @@ def format_indian(num):
     else:
         before = last3
     return before + "." + after
-
 
 @login_required
 @role_required(["ROOT_DEV", "DEV", "ADMIN", "USER"])
@@ -10554,7 +10553,6 @@ def uc_btc42a_form(request):
         year_text = ""
 
     office_name = current_ulb.ulb_name
-
     sanctioned_amount = uc.grant_amount or 0
 
     total_credit = tx.entries.aggregate(
@@ -10612,17 +10610,13 @@ def uc_btc42a_form(request):
         "ddo_code": ddo_code,
         "bill_code": bill_code,
         "head_code": head_code,
-
         "uc_number": uc_number,
         "uc_date": uc_date,
         "month_name": month_name,
         "year_text": year_text,
-
         "office_name": office_name,
         "letter_no": letter_no,
         "letter_date": letter_date,
-
-        # use formatted display values in context
         "sanctioned_amount": sanctioned_amount_disp,
         "grantee_name": office_name,
         "prev_unspent": prev_unspent,
@@ -10631,7 +10625,6 @@ def uc_btc42a_form(request):
         "surrendered_amount": surrendered_amount_disp,
         "surrendered_letter_no": surrendered_letter_no,
         "surrendered_letter_date": surrendered_letter_date,
-
         "grant_rows": grant_rows,
         "active_report_section": "uc",
         "active_uc_tab": "reports",
@@ -10642,6 +10635,15 @@ def uc_btc42a_form(request):
 
     export = request.GET.get("export")
     if export == "pdf":
+        # On Railway we disable WeasyPrint via USE_WEASYPRINT
+        if not getattr(settings, "USE_WEASYPRINT", True):
+            return HttpResponse(
+                "PDF generation is not available on this server.",
+                status=503,
+            )
+
+        from weasyprint import HTML  # local import so it doesn't run at startup
+
         template = get_template("uc/uc_btc42a_pdf.html")
         html_string = template.render(context, request)
         base_url = request.build_absolute_uri("/")
