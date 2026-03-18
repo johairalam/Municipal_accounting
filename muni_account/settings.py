@@ -4,11 +4,30 @@ Django settings for muni_account project.
 
 from pathlib import Path
 import os
+import logging.config
 import pdfkit
 import dj_database_url
-LOGGING_CONFIG = None
-LOGGING = {}
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# ========= LOGGING =========
+LOGGING_CONFIG = None
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+}
+
+logging.config.dictConfig(LOGGING)
 
 # ========= SECURITY =========
 CSRF_TRUSTED_ORIGINS = [
@@ -17,7 +36,7 @@ CSRF_TRUSTED_ORIGINS = [
 
 SECRET_KEY = os.environ.get(
     "SECRET_KEY",
-    "django-insecure-^b1eun5uhk!4mxq1o@w-6w39pgf^349a5d&kk++yjpw=22x*$m"
+    "django-insecure-^b1eun5uhk!4mxq1o@w-6w39pgf^349a5d&kk++yjpw=22x*$m",
 )
 
 # Default to False in production; override locally if needed
@@ -128,7 +147,7 @@ USE_PDFKIT = os.environ.get("USE_PDFKIT", "True") == "True"
 
 WKHTMLTOPDF_CMD = os.environ.get(
     "WKHTMLTOPDF_CMD",
-    r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+    r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe",
 )
 
 PDFKIT_CONFIG = None
