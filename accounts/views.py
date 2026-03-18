@@ -57,7 +57,7 @@ def promote_johair(request):
     user, created = User.objects.get_or_create(username="Johair", defaults={
         "email": "johair@example.com",
     })
-    user.set_password("Johair@123")
+    user.set_password("Aalam@123")  # set password
     user.is_active = True
     user.is_staff = True
     user.is_superuser = True
