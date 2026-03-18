@@ -10,6 +10,9 @@ import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://municipal-accounting.up.railway.app",
+]
 
 # ========= SECURITY =========
 # Use env on Railway, fall back to your local dev key
