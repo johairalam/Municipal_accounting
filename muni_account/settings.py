@@ -7,7 +7,9 @@ import os
 import pdfkit
 import dj_database_url
 
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 # ========= SECURITY =========
 # Use env on Railway, fall back to your local dev key
@@ -21,6 +23,7 @@ DEBUG = os.environ.get("DEBUG", "True") == "True"
 # Local: empty list; Railway: from env or *
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",") if os.environ.get("ALLOWED_HOSTS") else []
 
+
 # ========= APPS =========
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -33,6 +36,7 @@ INSTALLED_APPS = [
     "accounts.apps.AccountsConfig",
 ]
 
+
 # ========= MIDDLEWARE =========
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -44,8 +48,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+
 # ========= URLS / WSGI =========
 ROOT_URLCONF = "muni_account.urls"
+
 
 TEMPLATES = [
     {
@@ -63,7 +69,9 @@ TEMPLATES = [
     },
 ]
 
+
 WSGI_APPLICATION = "muni_account.wsgi.application"
+
 
 # ========= DATABASE =========
 # Railway: DATABASE_URL env (Postgres)
@@ -74,8 +82,10 @@ DATABASES = {
     )
 }
 
+
 # ========= AUTH / USER MODEL =========
 AUTH_USER_MODEL = "accounts.User"
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -84,15 +94,18 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
+
 
 # ========= I18N / TIME =========
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
+
 
 # ========= STATIC FILES =========
 STATIC_URL = "/static/"
@@ -106,6 +119,19 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+
 # ========= PDFKIT / WKHTMLTOPDF =========
-WKHTMLTOPDF_CMD = r"C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe"
-PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf=WKHTMLTOPDF_CMD)
+# Safe for local (Windows) and Railway (no exe)
+USE_PDFKIT = os.environ.get("USE_PDFKIT", "True") == "True"
+
+WKHTMLTOPDF_CMD = os.environ.get(
+    "WKHTMLTOPDF_CMD",
+    r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"  # local Windows default
+)
+
+PDFKIT_CONFIG = None
+if USE_PDFKIT:
+    try:
+        PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf=WKHTMLTOPDF_CMD)
+    except Exception:
+        PDFKIT_CONFIG = None
