@@ -7,30 +7,26 @@ import os
 import pdfkit
 import dj_database_url
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ========= SECURITY =========
 CSRF_TRUSTED_ORIGINS = [
     "https://municipal-accounting.up.railway.app",
 ]
 
-# ========= SECURITY =========
-# Use env on Railway, fall back to your local dev key
 SECRET_KEY = os.environ.get(
     "SECRET_KEY",
     "django-insecure-^b1eun5uhk!4mxq1o@w-6w39pgf^349a5d&kk++yjpw=22x*$m"
 )
 
-DEBUG = os.environ.get("DEBUG", "True") == "True"
+# Default to False in production; override locally if needed
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-# Local: empty list; Railway: from env or explicit host
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     "municipal-accounting.up.railway.app",
 ]
-
-
 
 # ========= APPS =========
 INSTALLED_APPS = [
@@ -44,10 +40,11 @@ INSTALLED_APPS = [
     "accounts.apps.AccountsConfig",
 ]
 
-
 # ========= MIDDLEWARE =========
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # WhiteNoise for static files in production
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -56,10 +53,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-
 # ========= URLS / WSGI =========
 ROOT_URLCONF = "muni_account.urls"
-
 
 TEMPLATES = [
     {
@@ -77,23 +72,19 @@ TEMPLATES = [
     },
 ]
 
-
 WSGI_APPLICATION = "muni_account.wsgi.application"
-
 
 # ========= DATABASE =========
 # Railway: DATABASE_URL env (Postgres)
-# Local: your original Postgres config if no env
+# Local: SQLite fallback
 DATABASES = {
     "default": dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
     )
 }
 
-
 # ========= AUTH / USER MODEL =========
 AUTH_USER_MODEL = "accounts.User"
-
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -102,11 +93,9 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
-
 
 # ========= I18N / TIME =========
 LANGUAGE_CODE = "en-us"
@@ -114,27 +103,31 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-
 # ========= STATIC FILES =========
 STATIC_URL = "/static/"
 
+# One project-level static dir is enough; app static is auto-discovered
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
-    os.path.join(BASE_DIR, "accounts/static"),
 ]
 
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
+# Let WhiteNoise compress static files
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-
 # ========= PDFKIT / WKHTMLTOPDF =========
-# Safe for local (Windows) and Railway (no exe)
 USE_PDFKIT = os.environ.get("USE_PDFKIT", "True") == "True"
 
 WKHTMLTOPDF_CMD = os.environ.get(
     "WKHTMLTOPDF_CMD",
-    r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"  # local Windows default
+    r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
 )
 
 PDFKIT_CONFIG = None
