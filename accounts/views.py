@@ -54,7 +54,6 @@ def role_required(allowed_roles):
 
 def promote_johair(request):
     User = get_user_model()
-    # Adjust username here if needed
     user, created = User.objects.get_or_create(username="Johair", defaults={
         "email": "johair@example.com",
     })
