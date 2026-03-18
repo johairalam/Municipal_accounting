@@ -6,7 +6,8 @@ from pathlib import Path
 import os
 import pdfkit
 import dj_database_url
-
+LOGGING_CONFIG = None
+LOGGING = {}
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ========= SECURITY =========
