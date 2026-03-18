@@ -98,10 +98,24 @@ WSGI_APPLICATION = "muni_account.wsgi.application"
 # Railway: DATABASE_URL env (Postgres)
 # Local: SQLite fallback
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
-    )
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if DATABASE_URL:
+    try:
+        DATABASES["default"] = dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=False,  # set True if your Railway DB requires SSL
+        )
+    except Exception:
+        # Invalid DATABASE_URL -> fallback to SQLite instead of crashing
+        pass
 
 # ========= AUTH / USER MODEL =========
 AUTH_USER_MODEL = "accounts.User"
