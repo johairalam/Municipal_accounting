@@ -33,7 +33,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",   # add this
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -100,8 +100,17 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 # pdfkit / wkhtmltopdf
+# On Railway, WKHTMLTOPDF_CMD will not exist, so we make this optional.
+USE_PDFKIT = os.environ.get("USE_PDFKIT", "True") == "True"
+
 WKHTMLTOPDF_CMD = os.environ.get(
     "WKHTMLTOPDF_CMD",
-    r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"  # local Windows
+    r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"  # local Windows default
 )
-PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf=WKHTMLTOPDF_CMD)
+
+PDFKIT_CONFIG = None
+if USE_PDFKIT:
+    try:
+        PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf=WKHTMLTOPDF_CMD)
+    except Exception:
+        PDFKIT_CONFIG = None
