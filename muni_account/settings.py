@@ -5,6 +5,7 @@ Django settings for muni_account project.
 from pathlib import Path
 import os
 import pdfkit  # <-- add this
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -56,15 +57,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'muni_account.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'muni_db',
-        'USER': 'postgres',
-        'PASSWORD': 'Johair@123',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    "default": dj_database_url.config(
+        default=os.environ.get("DATABASE_URL"),
+        conn_max_age=600,
+    )
 }
+
 
 # Use CUSTOM user model
 AUTH_USER_MODEL = 'accounts.User'  # IMPORTANT
