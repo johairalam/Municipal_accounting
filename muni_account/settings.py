@@ -83,8 +83,7 @@ WSGI_APPLICATION = "muni_account.wsgi.application"
 # Local: your original Postgres config if no env
 DATABASES = {
     "default": dj_database_url.config(
-        # format: postgres://USER:PASSWORD@HOST:PORT/NAME
-        default="postgres://postgres:Johair@123@localhost:5432/muni_db"
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
     )
 }
 
