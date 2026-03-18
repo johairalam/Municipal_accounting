@@ -1,0 +1,777 @@
+{% extends "uc/base_uc.html" %}
+{% load static %}
+
+{% block uc_content %}
+
+<div class="ie-page{% if prepare_mode %} ie-page-prepare{% endif %}">
+  <h2 style="text-align:center; font-weight:bold; margin-top:0; color:#fa6150; margin-bottom:6px;">
+    UC Prepared
+  </h2>
+
+  {# LIST MODE (hidden when prepare_mode is true) #}
+  <div id="uc-list-section" {% if prepare_mode %}style="display:none;"{% endif %}>
+
+    <div class="ie-filter-bar">
+      {# Ledger filter #}
+      <form method="get" style="display:flex; align-items:center; gap:6px;">
+        <label>
+          Ledger:
+          <select name="ledger_id"
+                  style="width:300px;padding:4px 8px;border-radius:4px;border:1px solid #4b5563;background:#020617;color:#e5e7eb;font-size:12px;">
+            <option value="">All</option>
+            {% for ledger in defined_ledgers %}
+              <option value="{{ ledger.id }}" {% if ledger_id|stringformat:"s" == ledger.id|stringformat:"s" %}selected{% endif %}>
+                {{ ledger.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <input type="hidden" name="from_date" value="{{ from_date }}">
+        <input type="hidden" name="to_date" value="{{ to_date }}">
+        <input type="hidden" name="q" value="{{ q }}">
+
+        <button type="submit">Apply</button>
+      </form>
+
+      {# Date range filter #}
+      <form method="get" style="display:flex; align-items:center; gap:6px;">
+        <label>
+          From:
+          <input type="date" name="from_date" value="{{ from_date }}" min="{{ earliest_as_on }}">
+        </label>
+        <label>
+          To:
+          <input type="date" name="to_date" value="{{ to_date }}" min="{{ earliest_as_on }}">
+        </label>
+
+        <input type="hidden" name="ledger_id" value="{{ ledger_id }}">
+        <input type="hidden" name="q" value="{{ q }}">
+
+        <button type="submit">Date</button>
+      </form>
+
+      {# Text search filter #}
+      <form method="get" style="display:flex; align-items:center; gap:6px;">
+        <label>
+          Amount/Letter/Ledger:
+          <input type="text" name="q" value="{{ q }}" placeholder="Search..." style="width:200px;">
+        </label>
+
+        <input type="hidden" name="ledger_id" value="{{ ledger_id }}">
+        <input type="hidden" name="from_date" value="{{ from_date }}">
+        <input type="hidden" name="to_date" value="{{ to_date }}">
+
+        <button type="submit">Search</button>
+      </form>
+    </div>
+
+    <div class="ie-table-wrapper">
+      <table class="ie-table ie-table-list">
+        <thead>
+          <tr>
+            <th style="width:7%;">Date</th>
+            <th style="width:10%;">Letter No.</th>
+            <th style="width:7%;">Letter Date</th>
+            <th style="width:20%;">Ledger Name</th>
+            <th style="width:26%;">Narration</th>
+            <th style="width:8%;">Amount</th>
+            <th style="width:8%;">Utilized Amount</th>
+            <th style="width:8%;">Balance</th>
+            <th style="width:6%;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if uc_rows %}
+            {% for row in uc_rows %}
+              <tr data-uc-id="{{ row.id }}">
+                <td class="ie-center">{{ row.date|date:"d-m-Y" }}</td>
+                <td class="ie-center">{{ row.letter_no }}</td>
+                <td class="ie-center">
+                  {% if row.letter_date %}
+                    {{ row.letter_date|date:"d-m-Y" }}
+                  {% endif %}
+                </td>
+                <td>{{ row.ledger_name }}</td>
+                <td style="max-width:240px;">{{ row.narration }}</td>
+                <td class="ie-num" data-raw-amount="{{ row.amount }}">{{ row.amount }}</td>
+                <td class="ie-num" data-raw-amount="{{ row.utilized_amount }}">{{ row.utilized_amount }}</td>
+                <td class="ie-num" data-raw-amount="{{ row.balance }}">{{ row.balance }}</td>
+                <td class="ie-center">
+                  <form method="post" action="" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="prepare_uc">
+                    <input type="hidden" name="uc_id" value="{{ row.id }}">
+                    <button type="submit"
+                            style="padding:3px 8px;font-size:11px;border-radius:8px;border:1px solid #22c55e;background:#22c55e;color:#020617;cursor:pointer;">
+                      Prepare
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="9" style="text-align:center; color:#9ca3af;">
+                No UC entries found for the selected Ledger.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# PREPARE MODE SECTION #}
+  {% if prepare_mode and selected_uc %}
+  <div id="uc-prepare-section">
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin:8px 0;">
+      <h3 style="margin:0; color:#facc15;">
+        Selected Ledger: {{ selected_uc.ledger_name }}
+        | UC Amount:
+        <span id="uc-amount-header" data-raw="{{ selected_uc.amount }}">{{ selected_uc.amount }}</span>
+        | Unutilized Grant:
+        <span id="unutilized-header" data-raw="{{ unutilized_grant }}">{{ unutilized_grant }}</span>
+      </h3>
+    </div>
+
+    {# optional visible UC date input #}
+    <div style="margin-bottom:6px; font-size:12px; color:#e5e7eb;">
+      <label>
+        UC Date:
+        <input type="date" id="uc_date_input"
+               style="padding:3px 6px;border-radius:4px;border:1px solid #4b5563;background:#020617;color:#e5e7eb;font-size:12px;">
+      </label>
+    </div>
+
+    <form method="post" action="" id="uc-prepare-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_uc_payment">
+      <input type="hidden" id="unutilized_grant" name="unutilized_grant" value="{{ unutilized_grant }}">
+      <input type="hidden" name="uc_id" value="{{ selected_uc.id }}">
+      <input type="hidden" name="ledger_id" value="{{ ledger_id }}">
+      {# hidden fields for backend #}
+      <input type="hidden" name="today_date" id="today_date">
+      <input type="hidden" name="uc_identifier" id="uc_identifier"
+             value="{{ selected_uc.letter_no }}/{{ selected_uc.letter_date|date:'d-m-Y' }}">
+      {# if you want to post visible uc_date separately: #}
+      <input type="hidden" name="uc_date" id="uc_date_hidden">
+
+      <table class="ie-table ie-table-prepare" id="uc-payment-table">
+        <thead>
+          <tr>
+            <th style="width:8%;">Date</th>
+            <th style="width:18%;">Voucher Number</th>
+            <th style="width:10%;">Cheque Number</th>
+            <th style="width:10%;">Amount</th>
+            <th style="width:54%;">Narration</th>
+          </tr>
+        </thead>
+        <tbody id="uc-payment-tbody">
+          {# Row 1: Unutilized grant line #}
+          <tr class="summary-row">
+            <td></td>
+            <td>Unutilized grant</td>
+            <td></td>
+            <td class="ie-num" id="unutilized-amount-cell" data-raw="{{ unutilized_grant }}">
+              {{ unutilized_grant }}
+            </td>
+            <td></td>
+          </tr>
+
+          {# Prefilled voucher rows when editing #}
+          {% if existing_lines %}
+            {% for line in existing_lines %}
+              <tr class="payment-row">
+                <td class="date-cell">
+                  {{ line.payment_txn.voucher_date|date:"d-m-Y" }}
+                </td>
+                <td>
+                  <select class="uc-voucher-select">
+                    <option value="">-- Select --</option>
+                    {% for pv in payment_vouchers %}
+                      <option value="{{ pv.id }}"
+                              {% if pv.id == line.payment_txn.id %}selected{% endif %}>
+                        {{ pv.voucher_no }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td class="cheque-cell">
+                  {% if line.payment_txn.paymentvendordetails %}
+                    {{ line.payment_txn.paymentvendordetails.cheque_no }}
+                  {% endif %}
+                </td>
+                <td class="ie-num amount-cell"
+                    data-amount="{{ line.amount }}">{{ line.amount }}</td>
+                <td class="narration-cell">
+                  {{ line.payment_txn.narration }}
+                </td>
+                <input type="hidden" name="voucher_ids[]" class="voucher-id-input"
+                       value="{{ line.payment_txn.id }}">
+                <input type="hidden" name="voucher_amounts[]" class="voucher-amount-input"
+                       value="{{ line.amount }}">
+              </tr>
+            {% endfor %}
+          {% endif %}
+
+          {# Summary rows inside table, Amount column #}
+          <tr id="total-row">
+            <td></td>
+            <td>Total payment amount</td>
+            <td></td>
+            <td class="ie-num" id="total-payment-amount-cell">0.00</td>
+            <td></td>
+          </tr>
+          <tr id="balance-row">
+            <td></td>
+            <td>Balance unutilized</td>
+            <td></td>
+            <td class="ie-num" id="balance-amount-cell" data-raw="{{ unutilized_grant }}">
+              {{ unutilized_grant }}
+            </td>
+            <td></td>
+          </tr>
+          {# Excess row as full payment-style row #}
+          <tr id="excess-row" class="payment-row">
+            <td class="date-cell"></td>
+            <td class="voucher-cell"></td>
+            <td class="cheque-cell"></td>
+            <td class="ie-num amount-cell" data-amount="0">0.00</td>
+            <td class="narration-cell"></td>
+            <input type="hidden" name="voucher_ids[]" class="voucher-id-input" value="">
+            <input type="hidden" name="voucher_amounts[]" class="voucher-amount-input" value="0">
+          </tr>
+        </tbody>
+      </table>
+
+      {# Add Row above, Save/Back centered #}
+      <div style="margin-top:10px; display:flex; justify-content:flex-start;">
+        <button type="button" id="add-payment-row"
+                style="padding:6px 14px;font-size:12px;border-radius:4px;border:1px solid #22c55e;background:linear-gradient(90deg,#22c55e,#16a34a);color:#020617;cursor:pointer;box-shadow:0 0 8px rgba(34,197,94,0.6);">
+          Add Row
+        </button>
+      </div>
+
+      <div style="margin-top:12px; display:flex; justify-content:center; gap:16px; align-items:center;">
+        <button type="submit" id="save-uc-btn" disabled
+                style="padding:6px 18px;font-size:12px;border-radius:4px;border:1px solid #2563eb;background:linear-gradient(90deg,#2563eb,#38bdf8);color:#f9fafb;cursor:not-allowed;box-shadow:0 0 8px rgba(37,99,235,0.6);">
+          Save
+        </button>
+
+        <a href="{% url 'uc_prepared' %}?ledger_id={{ ledger_id }}&from_date={{ from_date }}&to_date={{ to_date }}&q={{ q }}"
+           style="padding:6px 18px;font-size:12px;border-radius:4px;border:1px solid #6b7280;background:linear-gradient(90deg,#4b5563,#6b7280);color:#f9fafb;text-decoration:none;box-shadow:0 0 8px rgba(75,85,99,0.6);">
+          Back
+        </a>
+      </div>
+    </form>
+
+    <script>
+      const PAYMENT_VOUCHERS = {{ payment_vouchers|safe }};
+    </script>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+  .ie-page {
+    display: flex;
+    flex-direction: column;
+    height: calc(83vh - 25px);
+    padding: 0px 16px 16px 16px;
+    box-sizing: border-box;
+    margin-left: -15px;
+    margin-right: 1px;
+    margin-top: -10px;
+    overflow-x: hidden;
+  }
+
+  .ie-page.ie-page-prepare {
+    margin-left: -16px;
+    margin-right: -16px;
+    margin-top: -6px;
+    height: calc(84vh - 40px);
+    overflow-x: hidden;
+  }
+
+  .ie-filter-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: #e5e7eb;
+  }
+  .ie-filter-bar label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ie-filter-bar input[type="date"],
+  .ie-filter-bar input[type="text"],
+  .ie-filter-bar select {
+    padding: 4px 8px;
+    border: 1px solid #4b5563;
+    border-radius: 4px;
+    font-size: 12px;
+    background-color: #020617;
+    color: #e5e7eb;
+  }
+  .ie-filter-bar button {
+    padding: 5px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: 1px solid #288cfa;
+    background: linear-gradient(90deg, #288cfa, #22c55e);
+    color: #020617;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(40,140,250,0.6);
+  }
+
+  .ie-table-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    background: radial-gradient(circle at top left, #0b1220, #020617);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.9);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ie-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 11px;
+    color: #f29b04;
+  }
+
+  .ie-table th,
+  .ie-table td {
+    border-top: 1px solid #0266f1;
+    border-bottom: 1px solid #0350f6;
+    padding: 5px 7px;
+  }
+
+  .ie-table thead th {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(90deg, #0b1120, #1d4ed8);
+    z-index: 2;
+    font-weight: 500;
+    font-size: 10px;
+    color: #f9fafb;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: center;
+  }
+
+  .ie-table tbody td.ie-center {
+    text-align: center;
+  }
+
+  .ie-table tbody tr:hover td {
+    background-color: rgba(104, 157, 244, 0.197);
+    box-shadow: inset 0 0 0 9999px rgba(59,130,246,0.08);
+  }
+
+  .ie-table tbody tr {
+    cursor: default;
+  }
+
+  .ie-num {
+    text-align: right;
+    white-space: nowrap;
+    min-height: 16px;
+    color: #f58d06;
+  }
+
+  .ie-table-list td:nth-child(5),
+  .ie-table-list th:nth-child(5),
+  .ie-table-prepare td:nth-child(5),
+  .ie-table-prepare th:nth-child(5) {
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+  }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // ===== Common helpers =====
+  function parseINR(val) {
+    console.log('parseINR input =', val);
+    if (val === null || val === undefined) return 0;
+    const s = String(val).replace(/,/g, '').trim();
+    const n = Number(s);
+    console.log('parseINR parsed =', n);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function formatINR(n) {
+    const num = parseINR(n);
+    const formatted = num.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    console.log('formatINR', n, '->', formatted);
+    return formatted;
+  }
+
+  // ===== LIST PAGE STUFF (always safe) =====
+
+  // Set today's date for backend
+  const todayInput = document.getElementById('today_date');
+  if (todayInput) {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    todayInput.value = `${yyyy}-${mm}-${dd}`;
+  }
+
+  // UC date visible + hidden (only in prepare mode, ok to guard)
+  const ucDateInput = document.getElementById('uc_date_input');
+  const ucDateHidden = document.getElementById('uc_date_hidden');
+  if (ucDateInput && ucDateHidden) {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    ucDateInput.value = `${yyyy}-${mm}-${dd}`;
+    ucDateHidden.value = ucDateInput.value;
+    ucDateInput.addEventListener('change', function () {
+      ucDateHidden.value = this.value;
+    });
+  }
+
+  // LIST TABLE: format Amount / Utilized / Balance cells
+  document.querySelectorAll('.ie-num[data-raw-amount]').forEach(function (cell, idx) {
+    const raw = cell.getAttribute('data-raw-amount');
+    console.log('list cell', idx, 'raw =', raw);
+    if (raw === null || raw === '') return;
+    cell.textContent = formatINR(raw);
+  });
+
+  // Header + static unutilized/balance (present only in prepare)
+  ['uc-amount-header', 'unutilized-header', 'unutilized-amount-cell', 'balance-amount-cell'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const rawAttr = el.getAttribute('data-raw');
+    const raw = rawAttr || el.textContent;
+    console.log('header cell', id, 'raw =', raw);
+    if (!raw) return;
+    el.textContent = formatINR(raw);
+  });
+
+  // Disable Prepare button on listing when balance zero
+  document.querySelectorAll('tr[data-uc-id]').forEach(function (row) {
+    const cells = row.querySelectorAll('td.ie-num[data-raw-amount]');
+    if (!cells.length) return;
+    const last = cells[cells.length - 1];
+    const balRaw = last.getAttribute('data-raw-amount');
+    const balance = parseINR(balRaw);
+    console.log('row UC', row.getAttribute('data-uc-id'), 'balance raw=', balRaw, 'parsed=', balance);
+    if (balance === 0) {
+      const btn = row.querySelector('button');
+      console.log('Disabling Prepare for UC', row.getAttribute('data-uc-id'));
+      if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = 0.6;
+        btn.style.cursor = 'not-allowed';
+      }
+    }
+  });
+
+  // ===== PREPARE MODE STUFF (only if PAYMENT_VOUCHERS exists) =====
+
+  if (typeof PAYMENT_VOUCHERS === 'undefined') {
+    console.log('PAYMENT_VOUCHERS not defined, skipping prepare-mode JS.');
+    return;
+  }
+  console.log('PAYMENT_VOUCHERS raw:', PAYMENT_VOUCHERS);
+
+  const tbody = document.getElementById('uc-payment-tbody');
+  const addRowBtn = document.getElementById('add-payment-row');
+  const totalCell = document.getElementById('total-payment-amount-cell');
+  const balanceCell = document.getElementById('balance-amount-cell');
+  const excessRow = document.getElementById('excess-row');
+  const saveBtn = document.getElementById('save-uc-btn');
+  const unutilizedGrantInput = document.getElementById('unutilized_grant');
+  const form = document.getElementById('uc-prepare-form');
+
+  if (!tbody || !addRowBtn || !totalCell || !balanceCell || !unutilizedGrantInput || !saveBtn) {
+    console.warn('Prepare elements not found, skipping prepare-mode JS.');
+    return;
+  }
+
+  const UNUTILIZED_GRANT = parseINR(unutilizedGrantInput.value || '0');
+  console.log('UNUTILIZED_GRANT =', UNUTILIZED_GRANT);
+  let usedVoucherIds = new Set();
+
+  function recomputeUsedVoucherIds() {
+    usedVoucherIds = new Set();
+    tbody.querySelectorAll('select.uc-voucher-select').forEach(function (sel) {
+      const v = sel.value;
+      if (v) usedVoucherIds.add(String(v));
+    });
+    console.log('recomputeUsedVoucherIds ->', Array.from(usedVoucherIds));
+  }
+
+  function updateAddRowState(balance) {
+    console.log('updateAddRowState balance =', balance);
+    if (balance <= 0) {
+      addRowBtn.disabled = true;
+      addRowBtn.style.opacity = 0.6;
+      addRowBtn.style.cursor = 'not-allowed';
+    } else {
+      addRowBtn.disabled = false;
+      addRowBtn.style.opacity = 1;
+      addRowBtn.style.cursor = 'pointer';
+    }
+  }
+
+  function recalcTotals() {
+    let total = 0;
+    const rows = Array.from(tbody.querySelectorAll('tr.payment-row'))
+      .filter(r => r.id !== 'excess-row');
+
+    rows.forEach(function (row, idx) {
+      const amountEl = row.querySelector('.amount-cell');
+      if (!amountEl) return;
+      const raw = amountEl.dataset.amount || amountEl.textContent;
+      const n = parseINR(raw);
+      console.log('row', idx, 'amount raw=', raw, 'parsed=', n);
+      total += n;
+    });
+
+    let balance = UNUTILIZED_GRANT - total;
+    console.log('recalcTotals -> total:', total, 'balance:', balance);
+
+    // Reset excess row
+    if (excessRow) {
+      const exDate = excessRow.querySelector('.date-cell');
+      const exVoucher = excessRow.querySelector('.voucher-cell');
+      const exCheque = excessRow.querySelector('.cheque-cell');
+      const exAmtCell = excessRow.querySelector('.amount-cell');
+      const exNarr = excessRow.querySelector('.narration-cell');
+      const exHiddenId = excessRow.querySelector('.voucher-id-input');
+      const exHiddenAmt = excessRow.querySelector('.voucher-amount-input');
+
+      exDate.textContent = '';
+      exVoucher.textContent = '';
+      exCheque.textContent = '';
+      exAmtCell.dataset.amount = 0;
+      exAmtCell.textContent = formatINR(0);
+      exNarr.textContent = '';
+      if (exHiddenId) exHiddenId.value = '';
+      if (exHiddenAmt) exHiddenAmt.value = 0;
+    }
+
+    // Handle excess by pushing into excessRow
+    if (total > UNUTILIZED_GRANT && rows.length > 0 && excessRow) {
+      console.log('Excess detected, total > UNUTILIZED_GRANT');
+      const lastRow = rows[rows.length - 1];
+      const lastAmountCell = lastRow.querySelector('.amount-cell');
+      if (lastAmountCell) {
+        const rawLast = lastAmountCell.dataset.amount || lastAmountCell.textContent;
+        const lastAmount = parseINR(rawLast);
+
+        const over = total - UNUTILIZED_GRANT;
+        const newLast = lastAmount - over;
+        const fixedLast = newLast < 0 ? 0 : newLast;
+
+        console.log('lastAmount=', lastAmount, 'over=', over, 'fixedLast=', fixedLast);
+
+        lastAmountCell.dataset.amount = fixedLast;
+        lastAmountCell.textContent = formatINR(fixedLast);
+        const hiddenAmountInput = lastRow.querySelector('.voucher-amount-input');
+        if (hiddenAmountInput) hiddenAmountInput.value = fixedLast;
+
+        total = UNUTILIZED_GRANT;
+        balance = 0;
+
+        const excess = lastAmount - fixedLast;
+        console.log('excess moved =', excess);
+
+        const srcDate = lastRow.querySelector('.date-cell')?.textContent || '';
+        const voucherSelect = lastRow.querySelector('select.uc-voucher-select');
+        const srcVoucher = voucherSelect && voucherSelect.selectedOptions.length
+          ? voucherSelect.selectedOptions[0].textContent
+          : '';
+        const srcCheque = lastRow.querySelector('.cheque-cell')?.textContent || '';
+        const srcNarr = lastRow.querySelector('.narration-cell')?.textContent || '';
+
+        const exDate = excessRow.querySelector('.date-cell');
+        const exVoucher = excessRow.querySelector('.voucher-cell');
+        const exCheque = excessRow.querySelector('.cheque-cell');
+        const exAmtCell = excessRow.querySelector('.amount-cell');
+        const exNarr = excessRow.querySelector('.narration-cell');
+        const exHiddenId = excessRow.querySelector('.voucher-id-input');
+        const exHiddenAmt = excessRow.querySelector('.voucher-amount-input');
+        const lastHiddenId = lastRow.querySelector('.voucher-id-input');
+
+        exDate.textContent = srcDate;
+        exVoucher.textContent = srcVoucher;
+        exCheque.textContent = srcCheque;
+        exAmtCell.dataset.amount = excess;
+        exAmtCell.textContent = formatINR(excess);
+        exNarr.innerHTML = '<strong>Excess voucher amount</strong> – ' + srcNarr;
+
+        if (exHiddenId && lastHiddenId) exHiddenId.value = lastHiddenId.value;
+        if (exHiddenAmt) exHiddenAmt.value = excess;
+      }
+    }
+
+    totalCell.textContent = formatINR(total);
+    balanceCell.textContent = formatINR(balance);
+    console.log('totalCell text =', totalCell.textContent, 'balanceCell text =', balanceCell.textContent);
+    updateAddRowState(balance);
+
+    console.log('SAVE button state check, total =', total);
+    if (total <= 0) {
+      saveBtn.disabled = true;
+      saveBtn.style.cursor = 'not-allowed';
+      saveBtn.style.opacity = 0.6;
+    } else {
+      saveBtn.disabled = false;
+      saveBtn.style.cursor = 'pointer';
+      saveBtn.style.opacity = 1;
+    }
+  }
+
+  function buildVoucherOptions(currentValue) {
+    console.log('buildVoucherOptions usedVoucherIds:', Array.from(usedVoucherIds));
+    return PAYMENT_VOUCHERS
+      .map(v => {
+        v.amount = parseINR(v.amount);
+        return v;
+      })
+      .filter(v => !usedVoucherIds.has(String(v.id)) || String(v.id) === String(currentValue))
+      .map(v => `<option value="${v.id}" ${String(v.id) === String(currentValue) ? 'selected' : ''}>${v.voucher_no}</option>`)
+      .join('');
+  }
+
+  function addPaymentRow() {
+    console.log('addPaymentRow clicked');
+    const currentBalance = parseINR(balanceCell.textContent);
+    console.log('currentBalance before addRow =', currentBalance);
+    if (currentBalance <= 0) {
+      alert("Balance unutilized is zero. You cannot add more rows.");
+      return;
+    }
+
+    recomputeUsedVoucherIds();
+    const optionsHtml = buildVoucherOptions("");
+    if (!optionsHtml) {
+      alert("No more payment vouchers available for this ledger.");
+      return;
+    }
+    const tr = document.createElement('tr');
+    tr.classList.add('payment-row');
+    const totalRow = document.getElementById('total-row');
+    tbody.insertBefore(tr, totalRow);
+    tr.innerHTML = `
+      <td class="date-cell"></td>
+      <td>
+        <select class="uc-voucher-select">
+          <option value="">-- Select --</option>
+          ${optionsHtml}
+        </select>
+      </td>
+      <td class="cheque-cell"></td>
+      <td class="ie-num amount-cell" data-amount="0">${formatINR(0)}</td>
+      <td class="narration-cell"></td>
+      <input type="hidden" name="voucher_ids[]" class="voucher-id-input" value="">
+      <input type="hidden" name="voucher_amounts[]" class="voucher-amount-input" value="0">
+    `;
+  }
+
+  addRowBtn.addEventListener('click', addPaymentRow);
+
+  tbody.addEventListener('change', function (e) {
+    console.log('tbody change fired, target:', e.target);
+    if (!e.target.classList.contains('uc-voucher-select')) return;
+    const select = e.target;
+    const row = select.closest('tr.payment-row');
+    const voucherId = select.value;
+    console.log('Selected voucherId:', voucherId);
+
+    const hiddenIdInput = row.querySelector('.voucher-id-input');
+    const hiddenAmountInput = row.querySelector('.voucher-amount-input');
+
+    if (!voucherId) {
+      console.log('Voucher cleared');
+      row.querySelector('.date-cell').textContent = '';
+      row.querySelector('.cheque-cell').textContent = '';
+      const amountCell = row.querySelector('.amount-cell');
+      amountCell.textContent = formatINR(0);
+      amountCell.dataset.amount = '0';
+      row.querySelector('.narration-cell').textContent = '';
+      if (hiddenIdInput) hiddenIdInput.value = '';
+      if (hiddenAmountInput) hiddenAmountInput.value = '0';
+
+      recomputeUsedVoucherIds();
+      recalcTotals();
+
+      tbody.querySelectorAll('select.uc-voucher-select').forEach(function (sel) {
+        const current = sel.value;
+        sel.innerHTML = `<option value="">-- Select --</option>` + buildVoucherOptions(current);
+      });
+      return;
+    }
+
+    const v = PAYMENT_VOUCHERS.find(x => String(x.id) == String(voucherId));
+    console.log('Found voucher object:', v);
+
+    if (!v) {
+      console.warn('No voucher found for id', voucherId, 'in', PAYMENT_VOUCHERS);
+      return;
+    }
+
+    row.querySelector('.date-cell').textContent = v.date;
+    row.querySelector('.cheque-cell').textContent = v.cheque_no || '';
+    const amountCell = row.querySelector('.amount-cell');
+
+    const voucherAmount = parseINR(v.amount);
+    console.log('voucherAmount parsed =', voucherAmount);
+    amountCell.dataset.amount = voucherAmount;
+    amountCell.textContent = formatINR(voucherAmount);
+    row.querySelector('.narration-cell').textContent = v.narration || '';
+
+    if (hiddenIdInput) hiddenIdInput.value = voucherId;
+    if (hiddenAmountInput) hiddenAmountInput.value = voucherAmount;
+
+    recomputeUsedVoucherIds();
+    recalcTotals();
+
+    tbody.querySelectorAll('select.uc-voucher-select').forEach(function (sel) {
+      const current = sel.value;
+      sel.innerHTML = `<option value="">-- Select --</option>` + buildVoucherOptions(current);
+    });
+  });
+
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      const totalRaw = parseINR(totalCell.textContent || '0');
+      console.log('on submit totalRaw =', totalRaw);
+      if (totalRaw <= 0) {
+        alert("Total payment is zero. Please add at least one voucher before saving.");
+        e.preventDefault();
+        return;
+      }
+
+      const totalText = totalCell.textContent || '0';
+      const balanceText = balanceCell.textContent || '0';
+      const msg = `Do you want to save this UC?\nTotal payment amount: ${totalText}\nBalance unutilized: ${balanceText}`;
+      if (!confirm(msg)) {
+        e.preventDefault();
+      }
+    });
+  }
+
+  recalcTotals();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,297 @@
+{% extends "dashboards/base_root_dashboard.html" %}
+
+{% block title %}Manage Users | Muni Dashboard{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="font-size:18px; margin-bottom:12px;">Manage Users</h2>
+
+    <!-- Search bar -->
+    <form method="get" style="margin-bottom: 10px; display:flex; gap:8px; align-items:center;">
+    <input
+        type="text"
+        name="q"
+        value="{{ q|default:'' }}"
+        placeholder="Search by username, mobile or email"
+        style="
+            width: 400px;          /* smaller width */
+            padding:4px 6px;       /* smaller padding */
+            border-radius:6px;
+            border:1px solid #4b5563;
+            background:#020617;
+            color:#e5e7eb;
+            font-size:12px;        /* slightly smaller text */
+        ">
+    <button
+        type="submit"
+        style="
+            padding:5px 10px;
+            border-radius:999px;
+            border:1px solid #4b5563;
+            background:rgb(5, 130, 87);
+            color:#e5e7eb;
+            font-size:11px;
+            cursor:pointer;
+        ">
+        Search
+    </button>
+</form>
+
+
+    <table class="styled-table" style="text-align: left;">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Role</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Mobile</th>
+                <th>Email</th>
+                <th>Password</th>
+                <th>Status</th>
+                <th style="width:220px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+            <form method="post" action="{% url 'manage_user_action' u.id %}">
+                {% csrf_token %}
+                <tr data-user-row="{{ u.id }}">
+                    <!-- Username -->
+                    <td>
+                        <span class="view-field">{{ u.username }}</span>
+                        <input class="edit-field" type="text" name="username" value="{{ u.username }}">
+                    </td>
+
+                    <!-- Role -->
+                    <td>
+                        <span class="view-field">{{ u.role }}</span>
+                        <select class="edit-field" name="role">
+                            {# ROOT_DEV can assign DEV/ADMIN/USER #}
+                            {% if request.user.role == 'ROOT_DEV' %}
+                                <option value="DEV" {% if u.role == 'DEV' %}selected{% endif %}>Developer</option>
+                                <option value="ADMIN" {% if u.role == 'ADMIN' %}selected{% endif %}>Admin</option>
+                                <option value="USER" {% if u.role == 'USER' %}selected{% endif %}>User</option>
+                            {# DEV can assign ADMIN/USER #}
+                            {% elif request.user.role == 'DEV' %}
+                                <option value="ADMIN" {% if u.role == 'ADMIN' %}selected{% endif %}>Admin</option>
+                                <option value="USER" {% if u.role == 'USER' %}selected{% endif %}>User</option>
+                            {# ADMIN can assign USER only #}
+                            {% elif request.user.role == 'ADMIN' %}
+                                <option value="USER" {% if u.role == 'USER' %}selected{% endif %}>User</option>
+                            {% endif %}
+                        </select>
+                    </td>
+
+                    <!-- First name -->
+                    <td>
+                        <span class="view-field">{{ u.first_name }}</span>
+                        <input class="edit-field" type="text" name="first_name" value="{{ u.first_name }}">
+                    </td>
+
+                    <!-- Last name -->
+                    <td>
+                        <span class="view-field">{{ u.last_name }}</span>
+                        <input class="edit-field" type="text" name="last_name" value="{{ u.last_name }}">
+                    </td>
+
+                    <!-- Mobile -->
+                    <td>
+                        <span class="view-field">{{ u.mobile_number }}</span>
+                        <input class="edit-field" type="text" name="mobile_number" value="{{ u.mobile_number }}">
+                    </td>
+
+                    <!-- Email -->
+                    <td>
+                        <span class="view-field">{{ u.email }}</span>
+                        <input class="edit-field" type="email" name="email" value="{{ u.email }}">
+                    </td>
+
+                    <!-- Password (reset only) -->
+                    <td>
+                        <span class="view-field">********</span>
+                        <input class="edit-field"
+                               type="password"
+                               name="new_password"
+                               placeholder="Leave blank">
+                    </td>
+
+                    <!-- Status -->
+                    <td class="status-cell">
+                        {% if u.is_active %}
+                            <span class="view-field status-active">Active</span>
+                        {% else %}
+                            <span class="view-field status-disabled">Disabled</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="actions-cell">
+                        <!-- hidden field for action -->
+                        <input type="hidden" name="action" value="">
+
+                        <!-- Edit / Save -->
+                        <button type="button"
+                                class="btn-pill btn-ghost btn-edit"
+                                {% if not u.is_active %}disabled{% endif %}>
+                            Edit
+                        </button>
+                        <button type="submit"
+                                class="btn-pill btn-primary btn-save">
+                            Save
+                        </button>
+
+                        <!-- Activate / Disable -->
+                        {% if u.is_active %}
+                            <button type="submit"
+                                    class="btn-pill btn-warn"
+                                    onclick="this.form.action.value='disable';">
+                                Disable
+                            </button>
+                        {% else %}
+                            <button type="submit"
+                                    class="btn-pill btn-success"
+                                    onclick="this.form.action.value='activate';">
+                                Activate
+                            </button>
+                        {% endif %}
+
+                        <!-- Delete -->
+                        <button type="submit"
+                                class="btn-pill btn-danger"
+                                onclick="if(confirm('Delete this user?')) { this.form.action.value='delete'; } else { return false; }">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            </form>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+    .styled-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 13px;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #020617;
+        border: 1px solid #1f2937;
+    }
+    .styled-table thead {
+        background: linear-gradient(120deg, #0f172a, #111827);
+    }
+    .styled-table th,
+    .styled-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #1f2937;
+        border-right: 1px solid #1f2937;
+    }
+    .styled-table th:first-child,
+    .styled-table td:first-child {
+        border-left: 1px solid #1f2937;
+    }
+
+    .styled-table tbody tr:nth-child(even) {
+        background-color: #020617;
+    }
+    .styled-table tbody tr:nth-child(odd) {
+        background-color: #020617;
+    }
+    .styled-table tbody tr:hover {
+        background-color: #0b1120;
+    }
+
+    .styled-table input.edit-field,
+    .styled-table select.edit-field {
+        display: none;
+        width: 100%;
+        padding: 3px 6px;
+        border-radius: 6px;
+        border: 1px solid #4b5563;
+        background: #020617;
+        color: #e5e7eb;
+        font-size: 12px;
+    }
+
+    .btn-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        font-size: 11px;
+        cursor: pointer;
+        margin-right: 4px;
+        white-space: nowrap;
+    }
+    .btn-pill[disabled] {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    .btn-ghost {
+        border-color: #4b5563;
+        background: transparent;
+        color: #e5e7eb;
+    }
+    .btn-primary {
+        border-color: #22c55e;
+        background: #22c55e;
+        color: #020617;
+        display: none; /* hidden until edit mode */
+    }
+    .btn-warn {
+        border-color: #f97373;
+        background: #f97373;
+        color: #020617;
+    }
+    .btn-success {
+        border-color: #22c55e;
+        background: #22c55e;
+        color: #020617;
+    }
+    .btn-danger {
+        border-color: #ef4444;
+        background: transparent;
+        color: #ef4444;
+    }
+
+    .status-active {
+        color: #22c55e;
+        font-weight: 500;
+    }
+    .status-disabled {
+        color: #f97373;
+        font-weight: 500;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('tr[data-user-row]').forEach(function (row) {
+            const editBtn = row.querySelector('.btn-edit');
+            const saveBtn = row.querySelector('.btn-save');
+            const viewFields = row.querySelectorAll('.view-field');
+            const editFields = row.querySelectorAll('.edit-field');
+            const actionInput = row.querySelector('input[name="action"]');
+
+            if (!editBtn) return;
+
+            editBtn.addEventListener('click', function () {
+                viewFields.forEach(el => el.style.display = 'none');
+                editFields.forEach(el => el.style.display = 'block');
+                editBtn.style.display = 'none';
+                saveBtn.style.display = 'inline-flex';
+            });
+
+            saveBtn.addEventListener('click', function () {
+                actionInput.value = 'save';
+            });
+        });
+    });
+</script>
+{% endblock %}

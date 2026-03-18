@@ -1,0 +1,71 @@
+{# templates/accounts/_tb_row.html #}
+{% with row_id=node.id parent_id=node.parent_id|default:"" %}
+
+<tr
+  data-row-id="{{ row_id }}"
+  data-parent-id="{{ parent_id }}"
+  class="{% if level > 0 %}tb-row-hidden {% endif %}{% if node.is_suspense %}tb-suspense-row{% endif %}"
+  data-opening-signed="{{ node.opening_signed }}"
+  data-dr-signed="{{ node.dr_signed }}"
+  data-cr-signed="{{ node.cr_signed }}"
+  data-closing-signed="{{ node.closing_signed }}"
+>
+  <td>
+    <div class="tb-particular" style="margin-left: {{ level }}em;">
+      {% if node.children and node.children|length > 0 %}
+        <button type="button"
+                class="tb-toggle-btn"
+                aria-expanded="false"
+                data-row-id="{{ row_id }}">
+        </button>
+      {% else %}
+        <span style="display:inline-block;width:16px;"></span>
+      {% endif %}
+      <span>{{ node.name }}</span>
+    </div>
+  </td>
+
+  {# Opening #}
+  <td class="tb-num"
+      data-raw-amount="{% if node.opening_amount and node.opening_amount != 0 %}{{ node.opening_amount }}{% endif %}"
+      data-suffix="{{ node.opening_type|default_if_none:'' }}">
+    {% if node.opening_amount and node.opening_amount != 0 %}
+      {{ node.opening_amount|floatformat:2 }} {{ node.opening_type }}
+    {% endif %}
+  </td>
+
+  {# Dr #}
+  <td class="tb-num"
+      data-raw-amount="{% if node.dr_amount and node.dr_amount != 0 %}{{ node.dr_amount }}{% endif %}"
+      data-suffix="Dr">
+    {% if node.dr_amount and node.dr_amount != 0 %}
+      {{ node.dr_amount|floatformat:2 }} Dr
+    {% endif %}
+  </td>
+
+  {# Cr #}
+  <td class="tb-num"
+      data-raw-amount="{% if node.cr_amount and node.cr_amount != 0 %}{{ node.cr_amount }}{% endif %}"
+      data-suffix="Cr">
+    {% if node.cr_amount and node.cr_amount != 0 %}
+      {{ node.cr_amount|floatformat:2 }} Cr
+    {% endif %}
+  </td>
+
+  {# Closing #}
+  <td class="tb-num"
+      data-raw-amount="{% if node.closing_amount and node.closing_amount != 0 %}{{ node.closing_amount }}{% endif %}"
+      data-suffix="{{ node.closing_type|default_if_none:'' }}">
+    {% if node.closing_amount and node.closing_amount != 0 %}
+      {{ node.closing_amount|floatformat:2 }} {{ node.closing_type }}
+    {% endif %}
+  </td>
+</tr>
+
+{% if node.children %}
+  {% for child in node.children %}
+    {% include "accounts/_tb_row.html" with node=child level=level|add:"1" %}
+  {% endfor %}
+{% endif %}
+
+{% endwith %}

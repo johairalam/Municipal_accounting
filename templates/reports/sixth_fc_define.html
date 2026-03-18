@@ -1,0 +1,613 @@
+{% extends "reports/base_6th_fc.html" %}
+
+{% block fc_content %}
+<div class="ie-page" style="height:100vh; display:flex; flex-direction:column;">
+
+  <h2 style="text-align:center; font-weight:bold; margin-top:-20px; color:#fa6150; margin-bottom:6px; flex:0 0 auto;">
+    6TH FC LEDGER
+  </h2>
+
+  <div style="display:flex; gap:16px; align-items:flex-start; flex:1 1 auto; overflow:hidden;">
+
+    {# Left: dropdown + date + balance + ratio + define button #}
+    <div style="
+        flex:0 0 380px;
+        background:rgba(15,23,42,0.9);
+        border-radius:12px;
+        border:1px solid rgba(55,65,81,0.9);
+        padding:14px 16px;
+        display:flex;
+        flex-direction:column;
+        max-height:100%;
+    ">
+      <h3 style="font-size:15px; margin-bottom:10px; color:#e5e7eb; flex:0 0 auto;">
+        Select Ledger (Code starts with 450)
+      </h3>
+
+      <form method="post"
+            style="display:flex; flex-direction:column; gap:10px; flex:1 1 auto; min-height:0;"
+            onsubmit="return handleSubmit(this);">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="define">
+
+        {# Fixed top block: Ledger + Date + Balance in compact rows #}
+        <div style="flex:0 0 auto; display:flex; flex-direction:column; gap:6px;">
+
+          {# Ledger row #}
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label style="font-size:12px; color:#9ca3af; width:50px;">
+              Ledger
+            </label>
+            <select name="ledger_id"
+                    style="
+                        flex:1;
+                        padding:4px 8px;
+                        border-radius:8px;
+                        border:1px solid rgba(148,163,184,0.8);
+                        background:#020617;
+                        color:#e5e7eb;
+                        font-size:13px;
+                    ">
+              <option value="">-- Select Ledger --</option>
+              {% for ledger in ledgers_450_list %}
+                <option value="{{ ledger.id }}"
+                        {% if selected_ledger_id == ledger.id %}selected{% endif %}>
+                  {{ ledger.name }}
+                </option>
+              {% empty %}
+                <option value="">No 450* ledgers found for this ULB</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          {# As on date row #}
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label style="font-size:12px; color:#9ca3af; width:110px;">
+              As on Date
+            </label>
+            <input type="date"
+                   name="as_on_date"
+                   value="{{ as_on_date }}"
+                   style="
+                       flex:1;
+                       padding:4px 10px;
+                       border-radius:8px;
+                       border:1px solid rgba(148,163,184,0.8);
+                       background:#020617;
+                       color:#e5e7eb;
+                       font-size:13px;
+                   ">
+          </div>
+
+          {# Balance row #}
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label style="font-size:12px; color:#9ca3af; width:110px;">
+              Balance as on
+            </label>
+            <input type="text"
+                   name="balance_as_on"
+                   value="{{ balance_as_on }}"
+                   readonly
+                   style="
+                       flex:1;
+                       padding:4px 8px;
+                       border-radius:8px;
+                       border:1px solid rgba(55,65,81,0.9);
+                       background:#020617;
+                       color:#e5e7eb;
+                       font-size:13px;
+                   ">
+          </div>
+
+        </div>
+
+        {# Scrollable ratio block #}
+        <div style="
+            margin-top:6px;
+            padding:8px 10px;
+            border-radius:8px;
+            border:1px solid rgba(55,65,81,0.9);
+            flex:1 1 auto;
+            overflow-y:auto;
+            min-height:0;
+        ">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:12px; color:#e5e7eb;">
+              Ratio Allocation (6th FC)
+            </span>
+            <button type="button"
+                    onclick="autoSplitRatio6FC()"
+                    style="
+                        padding:2px 8px;
+                        border-radius:999px;
+                        border:1px solid rgba(56,189,248,0.9);
+                        background:transparent;
+                        color:#38bdf8;
+                        font-size:10px;
+                        cursor:pointer;
+                    ">
+              Auto Split
+            </button>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:6px;">
+
+            {# Level 1: Major funds #}
+            <div style="font-size:11px; color:#fbbf24; margin-bottom:4px;">
+              Major Funds
+            </div>
+
+            {# Development Fund - 30% #}
+            <div style="display:flex; justify-content:space-between; gap:4px;">
+              <label style="font-size:11px; color:#9ca3af; flex:1;">
+                1. Development Fund - 30%
+              </label>
+              <input type="text"
+                     name="ratio_dev_total"
+                     value="{{ ratio_dev_total }}"
+                     style="
+                         width:120px;
+                         padding:4px 8px;
+                         border-radius:6px;
+                         border:1px solid rgba(148,163,184,0.8);
+                         background:#020617;
+                         color:#e5e7eb;
+                         font-size:12px;
+                         text-align:right;
+                     ">
+            </div>
+
+            {#   Tied Fund 60% (of Dev) #}
+            <div style="display:flex; justify-content:space-between; gap:4px;">
+              <label style="font-size:11px; color:#9ca3af; flex:1; padding-left:10px;">
+                a. Tied Fund 60% (of Dev)
+              </label>
+              <input type="text"
+                     name="ratio_dev_tied_total"
+                     value="{{ ratio_dev_tied_total }}"
+                     style="
+                         width:120px;
+                         padding:4px 8px;
+                         border-radius:6px;
+                         border:1px solid rgba(148,163,184,0.8);
+                         background:#020617;
+                         color:#e5e7eb;
+                         font-size:12px;
+                         text-align:right;
+                     ">
+            </div>
+
+            {#        SWM 44% (of Tied) #}
+            <div style="display:flex; justify-content:space-between; gap:4px;">
+              <label style="font-size:11px; color:#9ca3af; flex:1; padding-left:26px;">
+                i. SWM 44% (of Tied)
+              </label>
+              <input type="text"
+                     name="ratio_dev_tied_swm"
+                     value="{{ ratio_dev_tied_swm }}"
+                     style="
+                         width:120px;
+                         padding:4px 8px;
+                         border-radius:6px;
+                         border:1px solid rgba(148,163,184,0.8);
+                         background:#020617;
+                         color:#e5e7eb;
+                         font-size:12px;
+                         text-align:right;
+                     ">
+            </div>
+
+            {#        Others 16% (of Tied) #}
+            <div style="display:flex; justify-content:space-between; gap:4px;">
+              <label style="font-size:11px; color:#9ca3af; flex:1; padding-left:26px;">
+                ii. Others 16% (of Tied)
+              </label>
+              <input type="text"
+                     name="ratio_dev_tied_others"
+                     value="{{ ratio_dev_tied_others }}"
+                     style="
+                         width:120px;
+                         padding:4px 8px;
+                         border-radius:6px;
+                         border:1px solid rgba(148,163,184,0.8);
+                         background:#020617;
+                         color:#e5e7eb;
+                         font-size:12px;
+                         text-align:right;
+                     ">
+            </div>
+
+            {#   Untied Fund 40% (of Dev) #}
+            <div style="display:flex; justify-content:space-between; gap:4px;">
+              <label style="font-size:11px; color:#9ca3af; flex:1; padding-left:10px;">
+                b. Untied Fund 40% (of Dev)
+              </label>
+              <input type="text"
+                     name="ratio_dev_untied"
+                     value="{{ ratio_dev_untied }}"
+                     style="
+                         width:120px;
+                         padding:4px 8px;
+                         border-radius:6px;
+                         border:1px solid rgba(148,163,184,0.8);
+                         background:#020617;
+                         color:#e5e7eb;
+                         font-size:12px;
+                         text-align:right;
+                     ">
+            </div>
+
+            {# Maintenance Fund - 20% #}
+            <div style="display:flex; justify-content:space-between; gap:4px; margin-top:4px;">
+              <label style="font-size:11px; color:#9ca3af; flex:1;">
+                2. Maintenance Fund - 20%
+              </label>
+              <input type="text"
+                     name="ratio_maint"
+                     value="{{ ratio_maint }}"
+                     style="
+                         width:120px;
+                         padding:4px 8px;
+                         border-radius:6px;
+                         border:1px solid rgba(148,163,184,0.8);
+                         background:#020617;
+                         color:#e5e7eb;
+                         font-size:12px;
+                         text-align:right;
+                     ">
+            </div>
+
+            {# General Fund - 50% #}
+            <div style="display:flex; justify-content:space-between; gap:4px;">
+              <label style="font-size:11px; color:#9ca3af; flex:1;">
+                3. General Fund - 50%
+              </label>
+              <input type="text"
+                     name="ratio_general"
+                     value="{{ ratio_general }}"
+                     style="
+                         width:120px;
+                         padding:4px 8px;
+                         border-radius:6px;
+                         border:1px solid rgba(148,163,184,0.8);
+                         background:#020617;
+                         color:#e5e7eb;
+                         font-size:12px;
+                         text-align:right;
+                     ">
+            </div>
+
+          </div>
+        </div>
+
+        {# Buttons row: Calculate + Define (fixed at bottom of left card) #}
+        <div style="display:flex; gap:8px; margin-top:8px; flex:0 0 auto;">
+          <button type="submit" name="sub_action" value="calc_balance"
+                  style="
+                      padding:6px 14px;
+                      border-radius:999px;
+                      border:none;
+                      background:linear-gradient(120deg,#0ea5e9,#22c55e);
+                      color:#020617;
+                      font-size:12px;
+                      letter-spacing:0.10em;
+                      text-transform:uppercase;
+                      font-weight:600;
+                      cursor:pointer;
+                  ">
+            Calculate
+          </button>
+
+          {% if 'BTN_6TH_FC_DEFINE_LEDGER' in allowed_codes %}
+          <button type="submit" name="sub_action" value="define_ratio"
+                  style="
+                      padding:6px 14px;
+                      border-radius:999px;
+                      border:none;
+                      background:linear-gradient(120deg,#22c55e,#16a34a);
+                      color:#020617;
+                      font-size:12px;
+                      letter-spacing:0.10em;
+                      text-transform:uppercase;
+                      font-weight:600;
+                      cursor:pointer;
+                  ">
+            Define Ledger
+          </button>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
+    {# Right: all information from DB (defined_6fc_list) #}
+    <div style="
+        flex:1;
+        background:rgba(15,23,42,0.9);
+        border-radius:12px;
+        border:1px solid rgba(55,65,81,0.9);
+        padding:14px 16px;
+        overflow:auto;
+        max-height:100%;
+    ">
+      <h3 style="font-size:08px; margin-bottom:10px; color:#e5e7eb;">
+        Already Defined 6th Finance Ledgers
+      </h3>
+
+      {% if defined_6fc_list %}
+  <table style="width:100%; border-collapse:collapse; font-size:9px; color:#e5e7eb;">
+    <thead>
+      <tr>
+        <th style="text-align:left; padding:6px 4px; border-bottom:1px solid rgba(55,65,81,0.9);">
+          Ledger
+        </th>
+        <th style="text-align:left; padding:6px 4px; text-align: center; border-bottom:1px solid rgba(55,65,81,0.9);">
+          As on Date
+        </th>
+        <th style="text-align:right; padding:6px 4px; text-align: center; border-bottom:1px solid rgba(55,65,81,0.9);">
+          Balance
+        </th>
+        <th style="text-align:right; padding:6px 4px; text-align: center; border-bottom:1px solid rgba(55,65,81,0.9);">
+          Dev Fund<br>(30%)
+        </th>
+        <th style="text-align:right; padding:6px 4px; text-align: center; border-bottom:1px solid rgba(55,65,81,0.9);">
+          Dev Tied<br>60%
+        </th>
+        <th style="text-align:right; padding:6px 4px; text-align: center; border-bottom:1px solid rgba(55,65,81,0.9);">
+          Dev Tied SWM<br>44%
+        </th>
+        <th style="text-align:right; padding:6px 4px; text-align: center; border-bottom:1px solid rgba(55,65,81,0.9);">
+          Dev Tied Others<br>16%
+        </th>
+        <th style="text-align:right; padding:6px 4px; text-align: center; border-bottom:1px solid rgba(55,65,81,0.9);">
+          Dev Untied<br>40%
+        </th>
+        <th style="text-align:right; padding:6px 4px; text-align: center; border-bottom:1px solid rgba(55,65,81,0.9);">
+          Maintenance<br>20%
+        </th>
+        <th style="text-align:right; padding:6px 4px; text-align: center; border-bottom:1px solid rgba(55,65,81,0.9);">
+          General<br>50%
+        </th>
+        <th style="text-align:left; padding:6px 4px; text-align: center; border-bottom:1px solid rgba(55,65,81,0.9);">
+          Action
+        </th>
+      </tr>
+    </thead>
+          <tbody>
+            {% for obj in defined_6fc_list %}
+              <tr>
+                <td style="padding:4px 4px; border-bottom:1px solid rgba(31,41,55,0.7);">
+                  {{ obj.ledger.name }}
+                </td>
+                <td style="padding:4px 4px; border-bottom:1px solid rgba(31,41,55,0.7);">
+                  {{ obj.as_on_date|date:"d-m-Y" }}
+                </td>
+                <td class="num-indian" style="padding:4px 4px; text-align:right; border-bottom:1px solid rgba(31,41,55,0.7);">
+                  {{ obj.balance_amount }}
+                </td>
+                <td class="num-indian" style="padding:4px 4px; text-align:right; border-bottom:1px solid rgba(31,41,55,0.7);">
+                  {{ obj.amount_dev_total }}
+                </td>
+                <td class="num-indian" style="padding:4px 4px; text-align:right; border-bottom:1px solid rgba(31,41,55,0.7);">
+                  {{ obj.amount_dev_tied_total }}
+                </td>
+                <td class="num-indian" style="padding:4px 4px; text-align:right; border-bottom:1px solid rgba(31,41,55,0.7);">
+                  {{ obj.amount_dev_tied_swm }}
+                </td>
+                <td class="num-indian" style="padding:4px 4px; text-align:right; border-bottom:1px solid rgba(31,41,55,0.7);">
+                  {{ obj.amount_dev_tied_others }}
+                </td>
+                <td class="num-indian" style="padding:4px 4px; text-align:right; border-bottom:1px solid rgba(31,41,55,0.7);">
+                  {{ obj.amount_dev_untied }}
+                </td>
+                <td class="num-indian" style="padding:4px 4px; text-align:right; border-bottom:1px solid rgba(31,41,55,0.7);">
+                  {{ obj.amount_maint }}
+                </td>
+                <td class="num-indian" style="padding:4px 4px; text-align:right; border-bottom:1px solid rgba(31,41,55,0.7);">
+                  {{ obj.amount_general }}
+                </td>
+                <td style="padding:4px 4px; border-bottom:1px solid rgba(31,41,55,0.7);">
+                  {% if 'BTN_6TH_FC_UNDO_LEDGER' in allowed_codes %}
+                  <form method="post" style="display:inline; margin:0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="undo">
+                    <input type="hidden" name="undo_ledger_id" value="{{ obj.ledger.id }}">
+                    <button type="submit"
+                            style="
+                                padding:3px 10px;
+                                border-radius:999px;
+                                border:1px solid rgba(248,113,113,0.9);
+                                background:transparent;
+                                color:#fca5a5;
+                                font-size:11px;
+                                cursor:pointer;
+                            ">
+                      Undo
+                    </button>
+                  </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p style="font-size:13px; color:#9ca3af;">
+          No 6th FC definitions saved yet.
+        </p>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<script>
+function formatIndianNumber(num) {
+    if (num === null || num === undefined || num === "") return "";
+    const n = Number(num);
+    if (isNaN(n)) return "";
+    const isNeg = n < 0;
+    const abs = Math.abs(n);
+    const parts = abs.toFixed(2).split(".");
+    let intPart = parts[0];
+    const decPart = parts[1];
+
+    if (intPart.length > 3) {
+        const last3 = intPart.slice(-3);
+        let rest = intPart.slice(0, -3);
+        const res = [];
+        while (rest.length > 2) {
+            res.unshift(rest.slice(-2));
+            rest = rest.slice(0, -2);
+        }
+        if (rest.length) res.unshift(rest);
+        intPart = res.join(",") + "," + last3;
+    }
+
+    let out = intPart + "." + decPart;
+    if (isNeg) out = "-" + out;
+    return out;
+}
+
+function autoSplitRatio6FC() {
+    const balanceInput = document.querySelector('input[name="balance_as_on"]');
+    if (!balanceInput) return;
+
+    const rawBal = (balanceInput.value || '').replace(/,/g, '');
+    const bal = parseFloat(rawBal);
+    if (isNaN(bal)) {
+        alert("Balance is not a valid number.");
+        return;
+    }
+
+    // Major funds from full balance
+    const dev_total = bal * 0.30;   // 30%
+    const maint     = bal * 0.20;   // 20%
+    const general   = bal * 0.50;   // 50%
+
+    // Tied/Untied out of Dev
+    const dev_tied_total = dev_total * 0.60;  // 60% of dev
+    const dev_untied     = dev_total * 0.40;  // 40% of dev
+
+    // SWM & Others as 44% and 16% of DEV (i.e. 60% * 44/60, 60% * 16/60)
+    const dev_tied_swm    = dev_total * 0.44;
+    const dev_tied_others = dev_total * 0.16;
+
+    const fDevTotal       = document.querySelector('input[name="ratio_dev_total"]');
+    const fMaint          = document.querySelector('input[name="ratio_maint"]');
+    const fGeneral        = document.querySelector('input[name="ratio_general"]');
+    const fDevTiedTotal   = document.querySelector('input[name="ratio_dev_tied_total"]');
+    const fDevTiedSwm     = document.querySelector('input[name="ratio_dev_tied_swm"]');
+    const fDevTiedOthers  = document.querySelector('input[name="ratio_dev_tied_others"]');
+    const fDevUntied      = document.querySelector('input[name="ratio_dev_untied"]');
+
+    if (fDevTotal)      fDevTotal.value      = formatIndianNumber(dev_total);
+    if (fMaint)         fMaint.value         = formatIndianNumber(maint);
+    if (fGeneral)       fGeneral.value       = formatIndianNumber(general);
+    if (fDevTiedTotal)  fDevTiedTotal.value  = formatIndianNumber(dev_tied_total);
+    if (fDevTiedSwm)    fDevTiedSwm.value    = formatIndianNumber(dev_tied_swm);
+    if (fDevTiedOthers) fDevTiedOthers.value = formatIndianNumber(dev_tied_others);
+    if (fDevUntied)     fDevUntied.value     = formatIndianNumber(dev_untied);
+}
+
+
+function stripIndianFormattingBeforeSubmit(form) {
+    const names = [
+        'balance_as_on',
+        'ratio_dev_total',
+        'ratio_maint',
+        'ratio_general',
+        'ratio_dev_tied_total',
+        'ratio_dev_tied_swm',
+        'ratio_dev_tied_others',
+        'ratio_dev_untied'
+    ];
+    names.forEach(function (name) {
+        const el = form.querySelector('input[name="' + name + '"]');
+        if (el && el.value) {
+            el.value = el.value.replace(/,/g, '');
+        }
+    });
+}
+
+function validateDefineMandatory(form) {
+    const requiredNames = [
+        'ledger_id',
+        'as_on_date',
+        'balance_as_on',
+        'ratio_dev_total',
+        'ratio_maint',
+        'ratio_general',
+        'ratio_dev_tied_total',
+        'ratio_dev_tied_swm',
+        'ratio_dev_tied_others',
+        'ratio_dev_untied'
+    ];
+    for (let i = 0; i < requiredNames.length; i++) {
+        const name = requiredNames[i];
+        const el = form.querySelector('[name="' + name + '"]');
+        if (!el || !el.value) {
+            alert("Please fill all mandatory fields before defining ledger.");
+            if (el) el.focus();
+            return false;
+        }
+    }
+    return true;
+}
+
+function handleSubmit(form) {
+    const active = document.activeElement;
+    let subAction = null;
+    if (active && active.name === 'sub_action') {
+        subAction = active.value;
+    }
+
+    if (subAction === 'calc_balance') {
+        stripIndianFormattingBeforeSubmit(form);
+        return true;
+    }
+
+    if (subAction === 'define_ratio') {
+        if (!validateDefineMandatory(form)) {
+            return false;
+        }
+        stripIndianFormattingBeforeSubmit(form);
+        return true;
+    }
+
+    stripIndianFormattingBeforeSubmit(form);
+    return true;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const fields = [
+        'balance_as_on',
+        'ratio_dev_total',
+        'ratio_maint',
+        'ratio_general',
+        'ratio_dev_tied_total',
+        'ratio_dev_tied_swm',
+        'ratio_dev_tied_others',
+        'ratio_dev_untied'
+    ];
+    fields.forEach(function (name) {
+        const el = document.querySelector('input[name="' + name + '"]');
+        if (!el || !el.value) return;
+        const raw = el.value.replace(/,/g, '');
+        const num = parseFloat(raw);
+        if (!isNaN(num)) {
+            el.value = formatIndianNumber(num);
+        }
+    });
+
+    document.querySelectorAll('td.num-indian').forEach(function (td) {
+        const raw = (td.textContent || '').replace(/,/g, '').trim();
+        if (!raw) return;
+        const num = parseFloat(raw);
+        if (!isNaN(num)) {
+            td.textContent = formatIndianNumber(num);
+        }
+    });
+});
+</script>
+
+{% endblock %}

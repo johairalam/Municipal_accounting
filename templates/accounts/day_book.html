@@ -1,0 +1,370 @@
+{% extends "accounts/base_accounts_dashboard.html" %}
+{% load static %}
+
+{% block accounts_content %}
+<div class="ie-page">
+  <h2 style="text-align:center; font-weight:bold; margin-top: -20px; color: #fae050; margin-bottom:6px;">
+    DAY BOOK
+  </h2>
+
+  <!-- Filter Bar -->
+  <form id="daybook-filter-form" method="get" class="ie-filter-bar">
+    <label>
+      From:
+      <input type="date" name="from_date" value="{{ from_date|date:'Y-m-d' }}">
+    </label>
+    <label>
+      To:
+      <input type="date" name="to_date" value="{{ to_date|date:'Y-m-d' }}">
+    </label>
+    <label>
+      Amount:
+      <input type="text" name="amount" value="{{ request.GET.amount|default_if_none:'' }}" placeholder="Amount">
+    </label>
+    <label>
+      Voucher no.:
+      <input type="text" name="voucher_no" value="{{ request.GET.voucher_no|default_if_none:'' }}" placeholder="Voucher number">
+    </label>
+    <label>
+      Cheque no.:
+      <input type="text" name="cheque_no" value="{{ request.GET.cheque_no|default_if_none:'' }}" placeholder="Cheque number">
+    </label>
+
+    <button type="submit">Search</button>
+    <a href="{% url 'accounts_day_book' %}" class="ie-filter-reset">Reset</a>
+  </form>
+
+  <div class="ie-table-wrapper">
+    <table id="daybook-table" class="ie-table">
+      <thead>
+        <tr>
+          <th style="width:8%;">Date</th>
+          <th>Voucher type</th>
+          <th>Voucher no.</th>
+          <th>Cheque no.</th>
+          <th>Particulars</th>
+          <th style="width:10%;">Dr amount</th>
+          <th style="width:10%;">Cr amount</th>
+          <th style="width:12%;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if entries %}
+          {% for e in entries %}
+            <tr data-voucher-id="{{ e.id }}">
+              <td class="ie-center">{{ e.entry_date|date:"d-m-Y" }}</td>
+
+              <td class="ie-center">
+                {% if e.voucher_type == "RECV" %}
+                  <span style="color:#22c55e; font-weight:600;">Receipts</span>
+                {% elif e.voucher_type == "PYMT" %}
+                  <span style="color:#f97373; font-weight:600;">Payments</span>
+                {% elif e.voucher_type == "CNTR" %}
+                  <span style="color:#38bdf8; font-weight:600;">Contra</span>
+                {% elif e.voucher_type == "JRNL" %}
+                  <span style="color:#eab308; font-weight:600;">Journal</span>
+                {% else %}
+                  <span>{{ e.voucher_type }}</span>
+                {% endif %}
+              </td>
+
+              <td class="ie-center">{{ e.voucher_number }}</td>
+              <td class="ie-center">{{ e.cheque_number }}</td>
+
+              <!-- Particulars -->
+              <td>
+                {% for line in e.line_rows %}
+                  <div class="ie-particular" style="margin-left: {% if line.is_debit %}0{% else %}1.5em{% endif %};">
+                    {% if line.is_debit %}
+                      <span>{{ line.ledger_name }}</span>
+                    {% else %}
+                      <span>To {{ line.ledger_name }}</span>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+                {% if e.narration %}
+                  <div class="ie-narration-inline">
+                    {{ e.narration }}
+                  </div>
+                {% endif %}
+              </td>
+
+              <!-- Dr amount -->
+              <td>
+                {% for line in e.line_rows %}
+                  {% if line.is_debit %}
+                    <div class="ie-num" data-raw-amount="{{ line.dr_amount }}">
+                      {{ line.dr_amount }}
+                    </div>
+                  {% else %}
+                    <div class="ie-num"></div>
+                  {% endif %}
+                {% endfor %}
+                {% if e.narration %}
+                  <div class="ie-num"></div>
+                {% endif %}
+              </td>
+
+              <!-- Cr amount -->
+              <td>
+                {% for line in e.line_rows %}
+                  {% if not line.is_debit %}
+                    <div class="ie-num" data-raw-amount="{{ line.cr_amount }}">
+                      {{ line.cr_amount }}
+                    </div>
+                  {% else %}
+                    <div class="ie-num"></div>
+                  {% endif %}
+                {% endfor %}
+                {% if e.narration %}
+                  <div class="ie-num"></div>
+                {% endif %}
+              </td>
+
+              <!-- Actions -->
+              <td>
+                <div style="
+                  display:inline-flex;
+                  gap:4px;
+                  padding:3px 6px;
+                  border-radius: 999px;
+                  background: #020617;
+                  border: 1px solid #1f2937;
+                ">
+
+                  {% if 'MENU_ACCOUNTS_TRANSACTION_ENTRY_EDIT' in allowed_codes %}
+                  <a href="{% url 'accounts_transaction_edit' e.id %}"
+                     style="padding:2px 6px; border-radius:8px; font-size:10px;
+                            background:#1d4ed8; color:#e5e7eb; text-decoration:none;">
+                    Edit
+                  </a>
+                  {% endif %}
+
+                  {% if 'MENU_ACCOUNTS_TRANSACTION_ENTRY_DUPLICATE' in allowed_codes %}
+                  <a href="{% url 'accounts_transaction_duplicate' e.id %}"
+                     style="padding:2px 6px; border-radius:8px; font-size:10px;
+                            background:#16a34a; color:#e5e7eb; text-decoration:none;">
+                    Duplicate
+                  </a>
+                  {% endif %}
+
+                  {% if 'MENU_ACCOUNTS_TRANSACTION_ENTRY_DELETE' in allowed_codes %}
+                  <a href="javascript:void(0)" class="delete-voucher-btn" data-voucher-id="{{ e.id }}"
+                     style="padding:2px 6px; border-radius:8px; font-size:10px;
+                            background:#b91c1c; color:#fef2f2; text-decoration:none; cursor:pointer;">
+                    Delete
+                  </a>
+                  {% endif %}
+
+                </div>
+              </td>
+
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" style="text-align:center; color:#9ca3af;">
+              No entries found for the selected criteria.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.ie-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(92vh - 60px);
+  padding: 8px 16px 16px 16px;
+  box-sizing: border-box;
+  margin-left: -30px;
+  margin-right: -20px;
+}
+
+.ie-filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+
+.ie-filter-bar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ie-filter-bar input[type="date"],
+.ie-filter-bar input[type="text"] {
+  padding: 4px 8px;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  font-size: 12px;
+  background-color: #020617;
+  color: #e5e7eb;
+}
+
+.ie-filter-bar button {
+  padding: 5px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid #288cfa;
+  background: linear-gradient(90deg, #288cfa, #22c55e);
+  color: #020617;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(40,140,250,0.6);
+}
+
+.ie-filter-reset {
+  padding: 5px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid #4b5563;
+  color: #e5e7eb;
+  text-decoration: none;
+}
+
+.ie-table-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  background: radial-gradient(circle at top left, #0b1220, #020617);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.9);
+  border: 1px solid #37371f;
+  display: flex;
+  flex-direction: column;
+}
+.ie-table td:nth-child(6),
+.ie-table td:nth-child(7) {
+  vertical-align: top;
+  text-align: right;
+}
+.ie-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 11px;
+  color: #c17306;
+}
+
+.ie-table th,
+.ie-table td {
+  border-top: 1px solid #0266f1;
+  border-bottom: 1px solid #0350f6;
+  padding: 5px 7px;
+}
+
+.ie-table thead th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(90deg, #0b1120, #1d4ed8);
+  z-index: 2;
+  font-weight: 500;
+  font-size: 10px;
+  color: #f9fafb;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.ie-table tbody td.ie-center {
+  text-align: center;
+}
+/* Full row hover effect */
+.ie-table tbody tr:hover td {
+  background-color: rgba(104, 157, 244, 0.197);
+  box-shadow: inset 0 0 0 9999px rgba(59,130,246,0.08);
+}
+
+/* Optional: cursor pointer for full row */
+.ie-table tbody tr {
+  cursor: pointer;
+}
+
+.ie-particular {
+  display: flex;
+  align-items: center;
+}
+
+.ie-narration-inline {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #fff714;
+  text-align: justify;
+  line-height: 1.4;
+}
+
+.ie-num {
+  text-align: right;
+  white-space: nowrap;
+  min-height: 16px;
+  color: #f58d06;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  function formatIndian(num) {
+    if (num === null || num === undefined || num === "") return "";
+    const n = Number(num);
+    if (isNaN(n)) return "";
+    return n.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  document.querySelectorAll('.ie-num[data-raw-amount]').forEach(function (cell) {
+    const raw = cell.getAttribute('data-raw-amount');
+    if (!raw) return;
+    const n = Number(raw);
+    if (isNaN(n)) return;
+    cell.textContent = formatIndian(Math.abs(n));
+  });
+
+  let lastSelectedVoucherId = null;
+  document.querySelectorAll('tr[data-voucher-id]').forEach(function(row) {
+    row.addEventListener('click', function() {
+      lastSelectedVoucherId = this.getAttribute('data-voucher-id');
+    });
+  });
+
+  document.querySelectorAll('.delete-voucher-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const voucherId = this.getAttribute('data-voucher-id');
+      if (confirm("Are you sure you want to delete this transaction?")) {
+        window.location.href = `/accounts/day-book/?delete=${voucherId}`;
+      }
+    });
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.altKey && (e.key === 'd' || e.key === 'D')) {
+      e.preventDefault();
+      if (!lastSelectedVoucherId) {
+        alert("Click a transaction row first, then press Alt + D to delete.");
+        return;
+      }
+      if (confirm("Are you sure you want to delete this transaction?")) {
+        window.location.href = `/accounts/day-book/?delete=${lastSelectedVoucherId}`;
+      }
+    }
+  });
+
+});
+</script>
+{% endblock %}

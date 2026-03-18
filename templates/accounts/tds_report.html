@@ -1,0 +1,331 @@
+{% extends "accounts/base_accounts_dashboard.html" %}
+{% load static %}
+
+{% block accounts_content %}
+<div class="cb-page">
+  <!-- Title -->
+  <h2 id="tds-title"
+      style="text-align:center; font-weight:bold; margin-top:-20px; color:#fae050; margin-bottom:6px;">
+    TDS REPORT
+  </h2>
+
+  <!-- Filters -->
+  <form method="get" class="cb-filter-bar">
+    <!-- Row 1: Month / Year -->
+    <div class="cb-filter-row">
+      <label>
+        Month:
+        <select name="month" id="month" class="cb-select">
+          <option value="">-- Select --</option>
+          <option value="1"  {% if request.GET.month == "1" %}selected{% endif %}>January</option>
+          <option value="2"  {% if request.GET.month == "2" %}selected{% endif %}>February</option>
+          <option value="3"  {% if request.GET.month == "3" %}selected{% endif %}>March</option>
+          <option value="4"  {% if request.GET.month == "4" %}selected{% endif %}>April</option>
+          <option value="5"  {% if request.GET.month == "5" %}selected{% endif %}>May</option>
+          <option value="6"  {% if request.GET.month == "6" %}selected{% endif %}>June</option>
+          <option value="7"  {% if request.GET.month == "7" %}selected{% endif %}>July</option>
+          <option value="8"  {% if request.GET.month == "8" %}selected{% endif %}>August</option>
+          <option value="9"  {% if request.GET.month == "9" %}selected{% endif %}>September</option>
+          <option value="10" {% if request.GET.month == "10" %}selected{% endif %}>October</option>
+          <option value="11" {% if request.GET.month == "11" %}selected{% endif %}>November</option>
+          <option value="12" {% if request.GET.month == "12" %}selected{% endif %}>December</option>
+        </select>
+      </label>
+
+      <label>
+        Year:
+        <input type="number" name="year" id="year"
+               value="{{ request.GET.year|default_if_none:'' }}">
+      </label>
+
+      <button type="submit" class="cb-btn-primary">View</button>
+    </div>
+
+    <!-- Row 2: Other search fields -->
+    <div class="cb-filter-row">
+      <label>
+        PAN number:
+        <input type="text" name="pan_number" id="pan_number"
+               value="{{ request.GET.pan_number|default_if_none:'' }}"
+               placeholder="PAN number">
+      </label>
+
+      <label>
+        Voucher no.:
+        <input type="text" name="voucher_no" id="voucher_no"
+               value="{{ request.GET.voucher_no|default_if_none:'' }}"
+               placeholder="Voucher number">
+      </label>
+
+      <label>
+        Vendor name:
+        <input type="text" name="vendor_name" id="vendor_name"
+               value="{{ request.GET.vendor_name|default_if_none:'' }}"
+               placeholder="Vendor name">
+      </label>
+
+      <label>
+        Amount:
+        <input type="text" name="amount" id="amount"
+               value="{{ request.GET.amount|default_if_none:'' }}"
+               placeholder="TDS amount">
+      </label>
+
+      <button type="submit" name="search" value="1" class="cb-btn-primary">Search</button>
+      <a href="{% url 'accounts_tds_report' %}" class="cb-filter-reset">Reset</a>
+      <!-- Export to Excel button -->
+      <button type="submit" name="export" value="1" class="cb-btn-primary">Export to Excel</button>
+    </div>
+  </form>
+
+  <!-- Table -->
+  <div class="cb-two-page-wrapper" style="display:block;">
+    <div class="cb-table-wrapper">
+      <table class="cb-table" style="table-layout:auto; width:100%;">
+        <thead>
+          <tr>
+            <th class="cb-center">Date</th>
+            <th class="cb-center">Voucher number</th>
+            <th class="cb-center">Vendor name</th>
+            <th class="cb-center">PAN number</th>
+            <th class="cb-center">TDS section</th>
+            <th class="cb-center">Nature</th>
+            <th class="cb-center">Type</th>
+            <th class="cb-center">Rate</th>
+            <th class="cb-center">TDS amount</th>
+            <th class="cb-center">As per ledger amount</th>
+            <th class="cb-center">Difference</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in tds_rows %}
+          <tr>
+            <td class="cb-center">{{ row.transaction.voucher_date|date:"d-m-Y" }}</td>
+            <td class="cb-center">{{ row.transaction.voucher_no }}</td>
+            <td class="cb-center">{{ row.vendor_name }}</td>
+            <td class="cb-center">{{ row.pan_number }}</td>
+            <td class="cb-center">{{ row.tds_section }}</td>
+            <td class="cb-center">{{ row.nature }}</td>
+            <td class="cb-center">{{ row.type }}</td>
+            <td class="cb-center cb-amount-cell" data-raw-amount="{{ row.rate }}">
+              {{ row.rate }}
+            </td>
+
+            <td class="cb-num cb-amount-cell" data-raw-amount="{{ row.tds_amount }}">
+              {{ row.tds_amount }}
+            </td>
+
+            <td class="cb-num cb-amount-cell" data-raw-amount="{{ row.ledger_amount }}">
+              {{ row.ledger_amount }}
+            </td>
+
+            <td class="cb-num cb-amount-cell" data-raw-amount="{{ row.diff_amount }}">
+              {{ row.diff_amount }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="11" class="cb-empty">
+              No records for the selected criteria.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="8" class="cb-footer-label">Total Amount</td>
+            <td class="cb-num cb-amount-cell" data-raw-amount="{{ total_tds }}">
+              {{ total_tds }}
+            </td>
+            <td class="cb-num cb-amount-cell" data-raw-amount="{{ total_ledger_tds }}">
+              {{ total_ledger_tds }}
+            </td>
+            <td class="cb-num cb-amount-cell" data-raw-amount="{{ total_diff }}">
+              {{ total_diff }}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+:root {
+  --cb-main-col-width: 200px;
+}
+
+/* reuse same styles from GST report – only here if not globally included */
+.cb-page {
+  display:flex;
+  flex-direction:column;
+  height:calc(92vh - 60px);
+  padding:8px 16px 8px 16px;
+  box-sizing:border-box;
+  margin-left:-30px;
+  margin-right:-20px;
+}
+
+.cb-filter-bar {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:6px;
+  font-size:11px;
+  color:#e5e7eb;
+}
+
+.cb-filter-row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+
+.cb-filter-bar label {
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+
+.cb-filter-bar input[type="number"],
+.cb-filter-bar input[type="text"],
+.cb-filter-bar select.cb-select {
+  padding:3px 6px;
+  border:1px solid #4b5563;
+  border-radius:4px;
+  font-size:11px;
+  background-color:#020617;
+  color:#e5e7eb;
+  white-space:nowrap;
+}
+
+.cb-select {
+  min-width:110px;
+}
+
+.cb-btn-primary {
+  padding:4px 10px;
+  font-size:11px;
+  border-radius:4px;
+  border:1px solid #288cfa;
+  background:linear-gradient(90deg,#288cfa,#22c55e);
+  color:#020617;
+  cursor:pointer;
+  box-shadow:0 0 10px rgba(40,140,250,0.6);
+}
+
+.cb-filter-reset {
+  padding:4px 10px;
+  font-size:11px;
+  border-radius:4px;
+  border:1px solid #4b5563;
+  color:#e5e7eb;
+  text-decoration:none;
+}
+
+.cb-two-page-wrapper {
+  flex:1 1 auto;
+  min-height:0;
+  background:radial-gradient(circle at top left,#0b1220,#020617);
+  box-shadow:0 18px 40px rgba(0,0,0,0.9);
+  border:1px solid #37371f;
+  padding:8px;
+}
+
+.cb-table-wrapper {
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+}
+
+.cb-table {
+  width:100%;
+  border-collapse:collapse;
+  table-layout:auto;
+  font-size:11px;
+  color:#e5e7eb;
+}
+
+.cb-table th,
+.cb-table td {
+  border-top:1px solid #0266f1;
+  border-bottom:1px solid #0350f6;
+  padding:4px 5px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.cb-table thead th {
+  background:linear-gradient(90deg,#0b1120,#1d4ed8);
+  font-weight:500;
+  font-size:11px;
+  color:#f9fafb;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  text-align:center;
+  position:sticky;
+  top:0;
+  z-index:5;
+}
+
+.cb-table tfoot td {
+  border-top:1px solid #4b5563;
+  border-bottom:1px solid #4b5563;
+}
+
+.cb-table tfoot {
+  position:sticky;
+  bottom:0;
+  background:#020617;
+  z-index:4;
+}
+
+.cb-center {
+  text-align:center;
+}
+
+.cb-num {
+  text-align:right;
+  white-space:nowrap;
+  color:#fbbf24;
+}
+
+.cb-amount-cell {
+  vertical-align:bottom;
+}
+
+.cb-empty {
+  text-align:center;
+  color:#fbbf24;
+}
+
+.cb-footer-label {
+  text-align:center;
+  font-weight:600;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  function formatIndian(num) {
+    if (num === null || num === undefined || num === "") return "";
+    const n = Number(num);
+    if (isNaN(n)) return "";
+    return n.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  document.querySelectorAll('.cb-num[data-raw-amount]').forEach(function (cell) {
+    const raw = cell.getAttribute('data-raw-amount');
+    if (!raw) return;
+    const n = Number(raw);
+    if (isNaN(n)) return;
+    cell.textContent = formatIndian(n);
+  });
+});
+</script>
+{% endblock %}

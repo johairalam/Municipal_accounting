@@ -1,0 +1,48 @@
+postgresSQL server:
+Login Id: postgres
+pass Johair@123
+
+Database name: muni_db
+owner: postgres
+
+
+Link :http://127.0.0.1:8000/admin/
+start server: python manage.py runserver
+
+CMD file location : C:\Users\HP\muni_account>
+
+
+
+C:\Users\HP\muni_account\
+ ├─ manage.py
+ ├─ muni_account/            <- Project settings
+ │    ├─ __init__.py
+ │    ├─ settings.py
+ │    ├─ urls.py
+ │    ├─ wsgi.py
+ │    └─ asgi.py
+ ├─ accounts/                <- Single app for ledger/group + frontend
+ │    ├─ __init__.py
+ │    ├─ apps.py
+ │    ├─ models.py           <- Head/Main/Subgroup/Group/Ledger
+ │    ├─ views.py            <- Create / Dashboard / Role logic
+ │    ├─ admin.py
+ │    ├─ urls.py
+ │    ├─ migrations/
+ │    ├─ templates/          <- HTML templates for frontend
+ │    │    └─ accounts/
+ │    │         ├─ dashboard.html
+ │    │         ├─ create_ulb.html
+ │    │         ├─ create_user.html
+ │    │         └─ create_account.html
+ │    └─ scripts/            <- Optional scripts / utilities
+
+
+
+cd C:\Users\HP\muni_account
+python manage.py runserver
+http://127.0.0.1:8000/
+
+Johair
+Aalam@123
+

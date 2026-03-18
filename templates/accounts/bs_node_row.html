@@ -1,0 +1,51 @@
+{# templates/accounts/bs_node_row.html #}
+{% with row_id=node.id parent_id=node.parent_id|default:"" %}
+<tr
+  data-row-id="{{ row_id }}"
+  data-parent-id="{{ parent_id }}"
+  class="{% if level > 0 %}ie-row-hidden{% endif %}"
+>
+  <td>
+    <div class="ie-particular" style="margin-left: {{ level }}em;">
+      {% if node.children and node.children|length > 0 %}
+        <button type="button"
+                class="tb-toggle-btn"
+                aria-expanded="false"
+                data-row-id="{{ row_id }}">
+        </button>
+      {% else %}
+        <span style="display:inline-block;width:16px;"></span>
+      {% endif %}
+      <span>{{ node.name }}</span>
+    </div>
+  </td>
+
+  {# amount cell #}
+  <td class="ie-num"
+      data-raw-amount="{{ node.closing_signed }}"
+      data-dc-type="{{ node.closing_type }}"
+      data-side="{{ side }}">
+    {# Normal sign on each side:
+       - Assets normal = Dr
+       - Liabilities normal = Cr
+       Anything opposite is shown as negative (brackets + red).
+    #}
+    {# TEMP DEBUG – remove after verifying:
+       {{ node.name }} :: {{ node.closing_signed }} :: {{ node.closing_type }} :: {{ side }}
+    #}
+    {% if side == "asset" and node.closing_type == "Cr" %}
+      (<span class="text-danger">{{ node.closing_amount|floatformat:2 }}</span>)
+    {% elif side == "liability" and node.closing_type == "Dr" %}
+      (<span class="text-danger">{{ node.closing_amount|floatformat:2 }}</span>)
+    {% else %}
+      {{ node.closing_amount|floatformat:2 }}
+    {% endif %}
+  </td>
+</tr>
+
+{% if node.children %}
+  {% for child in node.children %}
+    {% include "accounts/bs_node_row.html" with node=child side=side level=level|add:"1" %}
+  {% endfor %}
+{% endif %}
+{% endwith %}

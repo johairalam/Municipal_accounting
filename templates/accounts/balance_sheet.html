@@ -1,0 +1,412 @@
+{% extends "accounts/base_accounts_dashboard.html" %}
+{% load static %}
+
+{% block accounts_content %}
+<div class="ie-page">
+  <h2 style="text-align:center; font-weight:bold; margin-top: -20px; color: #fae050; margin-bottom:6px;">
+    Balance Sheet
+  </h2>
+
+  <!-- Filter & Export Bar -->
+  <form id="bs-filter-form" method="get" class="ie-filter-bar">
+    <label>
+      From:
+      <input type="date" name="from_date" value="{{ from_date|date:'Y-m-d' }}">
+    </label>
+    <label>
+      To:
+      <input type="date" name="to_date" value="{{ to_date|date:'Y-m-d' }}">
+    </label>
+    <button type="submit">Filter</button>
+
+    <button type="submit"
+            name="export"
+            value="excel"
+            formaction="{% url 'balance_sheet_export_excel' %}">
+      Export to Excel
+    </button>
+  </form>
+
+  <!-- Two tables side by side -->
+  <div class="ie-two-panels">
+    <!-- Left: Liabilities -->
+    <div class="ie-panel">
+      <div class="ie-table-wrapper">
+        <table id="bs-liab-table" class="ie-table">
+          <thead>
+            <tr>
+              <th style="width:80%;">Liabilities</th>
+              <th style="width:20%;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for root in liability_roots %}
+              {% include "accounts/bs_node_row.html" with node=root side="liability" level=0 %}
+            {% empty %}
+            <tr>
+              <td colspan="2" style="text-align:center;">No liabilities for this period.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right: Assets -->
+    <div class="ie-panel">
+      <div class="ie-table-wrapper">
+        <table id="bs-asset-table" class="ie-table">
+          <thead>
+            <tr>
+              <th style="width:80%;">Assets</th>
+              <th style="width:20%;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for root in asset_roots %}
+              {% include "accounts/bs_node_row.html" with node=root side="asset" level=0 %}
+            {% empty %}
+            <tr>
+              <td colspan="2" style="text-align:center;">No assets for this period.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- Fixed bottom totals bar inside content -->
+  <div class="ie-fixed-footer">
+    <div class="ie-fixed-footer-column">
+      <div class="ie-footer-line">
+        <span>Total Liabilities</span>
+        <span class="ie-num ie-footer-num"
+              data-raw-amount="{{ total_liability_signed }}"
+              data-dc-type="{{ total_liability_type }}"
+              data-side="liability">
+          {{ total_liability_signed }}
+        </span>
+      </div>
+    </div>
+    <div class="ie-fixed-footer-column">
+      <div class="ie-footer-line">
+        <span>Total Assets</span>
+        <span class="ie-num ie-footer-num"
+              data-raw-amount="{{ total_asset_signed }}"
+              data-dc-type="{{ total_asset_type }}"
+              data-side="asset">
+          {{ total_asset_signed }}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.ie-page {
+  padding: 8px 0 0 0;
+  height: 100%;
+}
+
+.ie-filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+
+.ie-filter-bar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ie-filter-bar input[type="date"] {
+  padding: 4px 8px;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  font-size: 12px;
+  background-color: #020617;
+  color: #e5e7eb;
+}
+
+.ie-filter-bar button {
+  padding: 5px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid #288cfa;
+  background: linear-gradient(90deg, #288cfa, #22c55e);
+  color: #020617;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(40,140,250,0.6);
+}
+
+.ie-filter-bar button:hover {
+  filter: brightness(1.05);
+}
+
+.ie-two-panels {
+  display: flex;
+  gap: 0;
+  height: calc(100vh - 170px);
+}
+
+.ie-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.ie-table-wrapper {
+  position: relative,
+  flex: 1;
+  overflow: auto;
+  border-radius: 0px;
+  background: radial-gradient(circle at top left, #0b1220, #020617);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.9);
+  border: 1px solid #1f2937;
+}
+
+.ie-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+
+.ie-table th,
+.ie-table td {
+  border: 1px solid #f9cf01;
+  padding: 7px 9px;
+}
+
+.ie-table thead th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(90deg, #0b1120, #1d4ed8);
+  z-index: 2;
+  font-weight: 600;
+  color: #f9fafb;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+}
+
+.ie-table tfoot tr {
+  position: sticky;
+  bottom: 0;
+  background: #020617;
+  font-weight: 700;
+  z-index: 1;
+  color: #fcc602;
+  letter-spacing: 0.10em;
+}
+
+.ie-table tbody tr {
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.ie-table tbody tr:hover {
+  background-color: rgba(59,130,246,0.35);
+  box-shadow: 0 0 8px rgba(59,130,246,0.7);
+  transform: translateY(-1px);
+}
+
+.ie-particular {
+  display: flex;
+  align-items: center;
+}
+
+.tb-toggle-btn {
+  border: none;
+  background: #1d4ed8;
+  cursor: pointer;
+  margin-right: 6px;
+  font-size: 11px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #e5e7eb;
+}
+
+.tb-toggle-btn[aria-expanded="false"]::before {
+  content: "▶";
+}
+
+.tb-toggle-btn[aria-expanded="true"]::before {
+  content: "▼";
+}
+
+.ie-row-hidden {
+  display: none;
+}
+
+.ie-num {
+  text-align: right;
+  white-space: nowrap;
+  color: #e5e7eb;
+}
+
+.ie-fixed-footer {
+  position: fixed;
+  left: 281px;
+  right: 20px;
+  bottom: 0;
+  height: 50px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 16px;
+  background: #020617;
+  border-top: 1px solid #1f2937;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.8);
+  z-index: 50;
+}
+
+.ie-fixed-footer-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ie-footer-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 700;
+  margin-left: 150px;
+  text-align: center;
+  color: #fcc602;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  function formatIndian(num) {
+    if (num === null || num === undefined || num === "") return "";
+    const n = Number(num);
+    if (isNaN(n)) return "";
+    return n.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  const HEAD_BG   = 'linear-gradient(90deg, #0b1120, #1d4ed8)';
+  const MAIN_BG   = 'linear-gradient(90deg, #022c22, #0f766e)';
+  const SUB_BG    = 'linear-gradient(90deg, #312e81, #4c1d95)';
+  const GROUP_BG  = 'linear-gradient(90deg, #1f2937, #374151)';
+  const LEDGER_BG = 'linear-gradient(90deg, #020617, #111827)';
+
+  function colorRowsByDepth(table) {
+    const bodyRows = table.querySelectorAll('tbody tr');
+    bodyRows.forEach(function (row) {
+      const partic = row.querySelector('.ie-particular');
+      if (!partic) return;
+
+      const styleAttr = partic.getAttribute('style') || '';
+      let depth = 0;
+      const match = styleAttr.match(/margin-left:\s*([0-9.]+)em/);
+      if (match) depth = parseFloat(match[1]);
+
+      if (depth < 0.5) {
+        row.style.background = HEAD_BG;
+        row.style.fontWeight = '700';
+      } else if (depth >= 0.5 && depth < 1.5) {
+        row.style.background = MAIN_BG;
+      } else if (depth >= 1.5 && depth < 2.5) {
+        row.style.background = SUB_BG;
+      } else if (depth >= 2.5 && depth < 3.5) {
+        row.style.background = GROUP_BG;
+      } else if (depth >= 3.5) {
+        row.style.background = LEDGER_BG;
+      }
+    });
+  }
+
+function formatNumCell(cell, side) {
+  const raw = cell.getAttribute('data-raw-amount');
+  if (raw === null || raw === "") {
+    cell.textContent = "";
+    return;
+  }
+  const n = Number(raw);
+  if (isNaN(n)) return;
+
+  const dcType = (cell.getAttribute('data-dc-type') || "").toUpperCase();
+  const s = (side || cell.getAttribute('data-side') || "").toLowerCase();
+
+  let negative = false;
+  if (s === 'asset' && dcType === 'CR') {
+    negative = true;
+  } else if (s === 'liability' && dcType === 'DR') {
+    negative = true;
+  }
+
+  const formatted = formatIndian(Math.abs(n));
+
+  if (negative) {
+    cell.innerHTML = '<span style="color:red;">(' + formatted + ')</span>';
+  } else {
+    cell.textContent = formatted;
+  }
+}
+
+
+  function formatTableNums(table, side) {
+    const numCells = table.querySelectorAll('.ie-num');
+    numCells.forEach(function (cell) {
+      formatNumCell(cell, side);
+    });
+  }
+
+  function initBsTable(tableId, side) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    colorRowsByDepth(table);
+    formatTableNums(table, side);
+
+    function toggleChildren(parentId, show) {
+      const rows = table.querySelectorAll('tr[data-parent-id="' + parentId + '"]');
+      rows.forEach(function (row) {
+        if (show) {
+          row.classList.remove('ie-row-hidden');
+        } else {
+          row.classList.add('ie-row-hidden');
+        }
+        const childId = row.dataset.rowId;
+        if (!show) {
+          toggleChildren(childId, false);
+          const btn = row.querySelector('.tb-toggle-btn');
+          if (btn) btn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    table.addEventListener('click', function (e) {
+      const btn = e.target.closest('.tb-toggle-btn');
+      if (!btn) return;
+
+      const rowId = btn.dataset.rowId;
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      toggleChildren(rowId, !expanded);
+    });
+  }
+
+  initBsTable('bs-liab-table', 'liability');
+  initBsTable('bs-asset-table', 'asset');
+
+  document.querySelectorAll('.ie-footer-num').forEach(function (cell) {
+    formatNumCell(cell, null);
+  });
+});
+</script>
+{% endblock %}

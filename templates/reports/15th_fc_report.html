@@ -1,0 +1,571 @@
+{% extends "reports/base_15th_fc.html" %}
+{% load static %}
+
+{% block fc_content %}
+
+<div class="ie-page">
+  <h2 style="text-align:center; font-weight:bold; margin-top:-20px; color:#fa6150; margin-bottom:6px;">
+    15TH FC REPORT
+  </h2>
+
+  <div class="ie-filter-bar">
+
+    <form method="get" style="display:flex; align-items:center; gap:6px;">
+      <label>
+        Ledger:
+        <select name="ledger_id"
+                style="
+                    width:260px;
+                    padding:4px 8px;
+                    border-radius:4px;
+                    border:1px solid #4b5563;
+                    background:#020617;
+                    color:#e5e7eb;
+                    font-size:11px;
+                ">
+          <option value="">All</option>
+          {% for ledger in defined_ledgers %}
+            <option value="{{ ledger.id }}" {% if ledger_id == ledger.id %}selected{% endif %}>
+              {{ ledger.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <input type="hidden" name="from_date" value="{{ from_date }}">
+      <input type="hidden" name="to_date" value="{{ to_date }}">
+      <input type="hidden" name="q" value="{{ q }}">
+
+      <button type="submit">Apply</button>
+    </form>
+
+    <form method="get" style="display:flex; align-items:center; gap:6px;">
+      <label>
+        From:
+        <input type="date"
+               name="from_date"
+               value="{{ from_date }}"
+               min="{{ earliest_as_on }}">
+      </label>
+      <label>
+        To:
+        <input type="date"
+               name="to_date"
+               value="{{ to_date }}"
+               min="{{ earliest_as_on }}">
+      </label>
+
+      <input type="hidden" name="ledger_id" value="{{ ledger_id }}">
+      <input type="hidden" name="q" value="{{ q }}">
+
+      <button type="submit">Date</button>
+    </form>
+
+    <form method="get" style="display:flex; align-items:center; gap:6px;">
+      <label>
+        Amount/Voucher/Cheque:
+        <input type="text" name="q"
+               value="{{ q }}"
+               placeholder="Search..."
+               style="width:180px; font-size:11px;">
+      </label>
+
+      <input type="hidden" name="ledger_id" value="{{ ledger_id }}">
+      <input type="hidden" name="from_date" value="{{ from_date }}">
+      <input type="hidden" name="to_date" value="{{ to_date }}">
+
+      <button type="submit">Search</button>
+
+      {# NEW: Export to Excel button using same filters #}
+      <button type="submit" name="export" value="excel">
+        Export to Excel
+      </button>
+    </form>
+  </div>
+
+  <div class="ie-table-wrapper">
+    <table class="ie-table">
+      {# MAIN TABLE WIDTH RATIO #}
+      <colgroup>
+        {# Receipts side: 7 columns #}
+        <col style="width: 6%;">   {# Date #}
+        <col style="width: 18%;">  {# Particulars #}
+        <col style="width: 7%;">   {# 40% Untied #}
+        <col style="width: 7%;">   {# 30% SWM #}
+        <col style="width: 7%;">   {# 30% RHWR #}
+        <col style="width: 7%;">   {# Interest Received #}
+        <col style="width: 8%;">   {# Total #}
+
+        {# Payment side: 9 columns #}
+        <col style="width: 6%;">   {# Date #}
+        <col style="width: 18%;">  {# Particulars #}
+        <col style="width: 6%;">   {# Voucher No. #}
+        <col style="width: 6%;">   {# Cheque No. #}
+        <col style="width: 6%;">   {# 40% Untied #}
+        <col style="width: 6%;">   {# 30% SWM #}
+        <col style="width: 6%;">   {# 30% RHWR #}
+        <col style="width: 6%;">   {# Interest Received #}
+        <col style="width: 7%;">   {# Total #}
+      </colgroup>
+
+      <thead>
+        <tr>
+          <th colspan="7" style="text-align:center;">Receipts</th>
+          <th colspan="9" style="text-align:center;">Payment</th>
+        </tr>
+        <tr>
+          <th>Date</th>
+          <th>Particulars</th>
+          <th>40% Untied</th>
+          <th>30% SWM</th>
+          <th>30% RHWR</th>
+          <th>Interest Received</th>
+          <th>Total</th>
+
+          <th>Date</th>
+          <th>Particulars</th>
+          <th>Voucher No.</th>
+          <th>Cheque No.</th>
+          <th>40% Untied</th>
+          <th>30% SWM</th>
+          <th>30% RHWR</th>
+          <th>Interest Received</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {# Row 1: Opening balance on Receipts side only #}
+        <tr>
+          <td class="ie-center">
+            {% if opening_as_on_date %}{{ opening_as_on_date|date:"d-m-Y" }}{% endif %}
+          </td>
+          <td>Opening Balance</td>
+          <td class="ie-num" data-raw-amount="{{ opening_40 }}">
+            {% if opening_40 %}{{ opening_40 }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ opening_30_swm }}">
+            {% if opening_30_swm %}{{ opening_30_swm }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ opening_30_rhwr }}">
+            {% if opening_30_rhwr %}{{ opening_30_rhwr }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ opening_interest }}">
+            {% if opening_interest %}{{ opening_interest }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ opening_total }}">
+            {% if opening_total %}{{ opening_total }}{% endif %}
+          </td>
+
+          {# Payment side empty in first row #}
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+
+        {% if rows %}
+          {# From row 2 onwards: receipts and payments transactions #}
+          {% for row in rows %}
+            <tr>
+              {# Receipts side #}
+              <td class="ie-center">
+                {% if row.recv_date %}{{ row.recv_date|date:"d-m-Y" }}{% endif %}
+              </td>
+              <td>{{ row.recv_particulars }}</td>
+              <td class="ie-num" data-raw-amount="{{ row.recv_40 }}">
+                {% if row.recv_40 %}{{ row.recv_40 }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.recv_30_swm }}">
+                {% if row.recv_30_swm %}{{ row.recv_30_swm }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.recv_30_rhwr }}">
+                {% if row.recv_30_rhwr %}{{ row.recv_30_rhwr }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.recv_interest }}">
+                {% if row.recv_interest %}{{ row.recv_interest }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.recv_total }}">
+                {% if row.recv_total %}{{ row.recv_total }}{% endif %}
+              </td>
+
+              {# Payment side (same index, so first payment is in this row) #}
+              <td class="ie-center">
+                {% if row.pay_date %}{{ row.pay_date|date:"d-m-Y" }}{% endif %}
+              </td>
+              <td>{{ row.pay_particulars }}</td>
+              <td class="ie-center">{{ row.pay_voucher_no }}</td>
+              <td class="ie-center">{{ row.pay_cheque_no }}</td>
+              <td class="ie-num" data-raw-amount="{{ row.pay_40 }}">
+                {% if row.pay_40 %}{{ row.pay_40 }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.pay_30_swm }}">
+                {% if row.pay_30_swm %}{{ row.pay_30_swm }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.pay_30_rhwr }}">
+                {% if row.pay_30_rhwr %}{{ row.pay_30_rhwr }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.pay_interest }}">
+                {% if row.pay_interest %}{{ row.pay_interest }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.pay_total }}">
+                {% if row.pay_total %}{{ row.pay_total }}{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="16" style="text-align:center; color:#9ca3af;">
+              No data for selected criteria.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Footer totals #}
+  <div class="ie-footer-row">
+    <div class="ie-footer-left">
+      <table class="ie-footer-table">
+        {# RECEIPTS FOOTER WIDTH RATIO: 7 columns, same pattern #}
+        <colgroup>
+          <col style="width: 6%;">   {# Date (merged) #}
+          <col style="width: 18%;">  {# Particulars (merged) #}
+          <col style="width: 7%;">   {# 40% Untied #}
+          <col style="width: 7%;">   {# 30% SWM #}
+          <col style="width: 7%;">   {# 30% RHWR #}
+          <col style="width: 7%;">   {# Interest #}
+          <col style="width: 8%;">   {# Total #}
+        </colgroup>
+
+        {# Row 1: ratio labels for receipts, merge col 1+2 #}
+        <tr class="footer-heading">
+          <td colspan="2" style="text-align:center;"></td>
+          <td class="ie-center">40% Untied</td>
+          <td class="ie-center">30% SWM</td>
+          <td class="ie-center">30% RHWR</td>
+          <td class="ie-center">Interest</td>
+          <td class="ie-center">Total</td>
+        </tr>
+        {# Row 2: total receipts #}
+        <tr>
+          <td colspan="2" style="text-align:left;">Total Receipts</td>
+          <td class="ie-num" data-raw-amount="{{ recv_totals_40 }}">
+            {% if recv_totals_40 %}{{ recv_totals_40 }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ recv_totals_30_swm }}">
+            {% if recv_totals_30_swm %}{{ recv_totals_30_swm }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ recv_totals_30_rhwr }}">
+            {% if recv_totals_30_rhwr %}{{ recv_totals_30_rhwr }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ recv_totals_interest }}">
+            {% if recv_totals_interest %}{{ recv_totals_interest }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ total_receipts }}">
+            {% if total_receipts %}{{ total_receipts }}{% endif %}
+          </td>
+        </tr>
+        {# Row 3: blank spacing row, merged label #}
+        <tr>
+          <td colspan="2" style="text-align:left;">&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+        </tr>
+        {# Row 4: grand total for receipts #}
+        <tr class="footer-grand">
+          <td colspan="2" style="text-align:left;">Grand Total</td>
+          <td class="ie-num" data-raw-amount="{{ recv_totals_40|add:opening_40 }}">
+            {% with v=recv_totals_40|add:opening_40 %}{% if v %}{{ v }}{% endif %}{% endwith %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ recv_totals_30_swm|add:opening_30_swm }}">
+            {% with v=recv_totals_30_swm|add:opening_30_swm %}{% if v %}{{ v }}{% endif %}{% endwith %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ recv_totals_30_rhwr|add:opening_30_rhwr }}">
+            {% with v=recv_totals_30_rhwr|add:opening_30_rhwr %}{% if v %}{{ v }}{% endif %}{% endwith %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ recv_totals_interest|add:opening_interest }}">
+            {% with v=recv_totals_interest|add:opening_interest %}{% if v %}{{ v }}{% endif %}{% endwith %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ grand_total_left }}">
+            {% if grand_total_left %}{{ grand_total_left }}{% endif %}
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="ie-footer-right">
+      <table class="ie-footer-table">
+        {# PAYMENTS FOOTER WIDTH RATIO: 9 columns, same pattern #}
+        <colgroup>
+          <col style="width: 6%;">   {# Date #}
+          <col style="width: 18%;">  {# Particulars #}
+          <col style="width: 6%;">   {# Voucher No. #}
+          <col style="width: 6%;">   {# Cheque No. #}
+          <col style="width: 6%;">   {# 40% Untied #}
+          <col style="width: 6%;">   {# 30% SWM #}
+          <col style="width: 6%;">   {# 30% RHWR #}
+          <col style="width: 6%;">   {# Interest #}
+          <col style="width: 7%;">   {# Total #}
+        </colgroup>
+
+        {# Row 1: ratio labels for payments, merge col 1-4 #}
+        <tr class="footer-heading">
+          <td colspan="4" style="text-align:left;"></td>
+          <td class="ie-center">40% Untied</td>
+          <td class="ie-center">30% SWM</td>
+          <td class="ie-center">30% RHWR</td>
+          <td class="ie-center">Interest</td>
+          <td class="ie-center">Total</td>
+        </tr>
+        {# Row 2: total payment #}
+        <tr>
+          <td colspan="4" style="text-align:left;">Total Payment</td>
+          <td class="ie-num" data-raw-amount="{{ pay_totals_40 }}">
+            {% if pay_totals_40 %}{{ pay_totals_40 }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ pay_totals_30_swm }}">
+            {% if pay_totals_30_swm %}{{ pay_totals_30_swm }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ pay_totals_30_rhwr }}">
+            {% if pay_totals_30_rhwr %}{{ pay_totals_30_rhwr }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ pay_totals_interest }}">
+            {% if pay_totals_interest %}{{ pay_totals_interest }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ total_payments }}">
+            {% if total_payments %}{{ total_payments }}{% endif %}
+          </td>
+        </tr>
+        {# Row 3: closing balance #}
+        <tr>
+          <td colspan="4" style="text-align:left;">Closing Balance</td>
+          <td class="ie-num" data-raw-amount="{{ closing_40 }}">
+            {% if closing_40 %}{{ closing_40 }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ closing_30_swm }}">
+            {% if closing_30_swm %}{{ closing_30_swm }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ closing_30_rhwr }}">
+            {% if closing_30_rhwr %}{{ closing_30_rhwr }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ closing_interest }}">
+            {% if closing_interest %}{{ closing_interest }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ closing_balance }}">
+            {% if closing_balance %}{{ closing_balance }}{% endif %}
+          </td>
+        </tr>
+        {# Row 4: grand total for payment #}
+        <tr class="footer-grand">
+          <td colspan="4" style="text-align:left;">Grand Total</td>
+          <td class="ie-num" data-raw-amount="{{ pay_totals_40|add:closing_40 }}">
+            {% with v=pay_totals_40|add:closing_40 %}{% if v %}{{ v }}{% endif %}{% endwith %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ pay_totals_30_swm|add:closing_30_swm }}">
+            {% with v=pay_totals_30_swm|add:closing_30_swm %}{% if v %}{{ v }}{% endif %}{% endwith %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ pay_totals_30_rhwr|add:closing_30_rhwr }}">
+            {% with v=pay_totals_30_rhwr|add:closing_30_rhwr %}{% if v %}{{ v }}{% endif %}{% endwith %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ pay_totals_interest|add:closing_interest }}">
+            {% with v=pay_totals_interest|add:closing_interest %}{% if v %}{{ v }}{% endif %}{% endwith %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ grand_total_right }}">
+            {% if grand_total_right %}{{ grand_total_right }}{% endif %}
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<style>
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.ie-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(85vh - 60px);
+  padding: 8px 16px 16px 16px;
+  box-sizing: border-box;
+  margin-left: -30px;
+  margin-right: -20px;
+}
+
+/* shrink font and let columns auto-fit so no horizontal scroll */
+.ie-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 9px;
+  color: #c17306;
+}
+
+.ie-filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #e5e7eb;
+}
+
+.ie-filter-bar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ie-filter-bar input[type="date"],
+.ie-filter-bar input[type="text"],
+.ie-filter-bar select {
+  padding: 4px 8px;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  font-size: 11px;
+  background-color: #020617;
+  color: #e5e7eb;
+}
+
+.ie-filter-bar button {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid #288cfa;
+  background: linear-gradient(90deg, #288cfa, #22c55e);
+  color: #020617;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(40,140,250,0.6);
+}
+
+.ie-table-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: radial-gradient(circle at top left, #0b1220, #020617);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.9);
+  border: 1px solid #37371f;
+  display: flex;
+  flex-direction: column;
+}
+
+.ie-table th,
+.ie-table td {
+  border-top: 1px solid #0266f1;
+  border-bottom: 1px solid #0350f6;
+  padding: 3px 4px;
+}
+
+/* header style aligned with transaction define */
+.ie-table thead th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(90deg, #0b1120, #1d4ed8);
+  z-index: 2;
+  font-weight: 500;
+  font-size: 9px;
+  color: #f9fafb;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.ie-table tbody td.ie-center {
+  text-align: center;
+}
+
+.ie-table tbody tr:hover td {
+  background-color: rgba(104,157,244,0.197);
+  box-shadow: inset 0 0 0 9999px rgba(59,130,246,0.08);
+}
+
+.ie-table tbody tr {
+  cursor: default;
+}
+
+.ie-num {
+  text-align: right;
+  white-space: nowrap;
+  min-height: 16px;
+  color: #f58d06;
+}
+
+/* Footer layout */
+.ie-footer-row {
+  margin-top: 2px;
+  display: flex;
+  justify-content: space-between;
+  gap: 3px;
+  margin-bottom: -10px;
+}
+
+.ie-footer-left {
+  width: 47%;
+}
+.ie-footer-right {
+  width: 53%;
+}
+
+.ie-footer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9px;
+  color: #e5e7eb;
+}
+
+.ie-footer-table td {
+  border: 1px solid #4b5563;
+  padding: 4px 6px;
+  vertical-align: middle;
+}
+
+.ie-footer-table .footer-heading td {
+  background:#111827;
+  font-weight:bold;
+}
+
+.ie-footer-table .footer-grand td {
+  background:#020617;
+  font-weight:bold;
+}
+
+.ie-footer-table .ie-num {
+  text-align: right;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.ie-num[data-raw-amount]').forEach(function (cell) {
+    const raw = cell.getAttribute('data-raw-amount');
+    if (!raw) return;
+    const n = Number(raw);
+    if (isNaN(n) || n === 0) {
+      cell.textContent = "";
+      return;
+    }
+    cell.textContent = n.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  });
+});
+</script>
+
+{% endblock %}

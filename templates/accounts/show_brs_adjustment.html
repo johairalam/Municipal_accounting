@@ -1,0 +1,416 @@
+{% extends "accounts/base_brs.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block brs_title %}Show BRS Adjustment{% endblock %}
+
+{% block brs_content %}
+  {# 1) Top filter: Ledger + Type #}
+  <form method="get" id="show-brs-ledger-type" class="cb-filter-bar">
+    <div class="cb-filter-row brs-top-filter-row">
+      <label class="brs-top-filter-item">
+        <span class="brs-top-label">Ledger</span>
+        <select name="ledger_id" id="ledger_id" class="cb-select cb-input" required>
+          <option value="">-- Select bank ledger (450...) --</option>
+          {% for ledger in ledgers %}
+            <option value="{{ ledger.id }}"
+                    {% if request.GET.ledger_id == ledger.id|stringformat:"s" %}selected{% endif %}>
+              {{ ledger.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="brs-top-filter-item">
+        <span class="brs-top-label">Type</span>
+        <select name="entry_type" id="entry_type" class="cb-select cb-input" required>
+          <option value="">-- Select --</option>
+          <option value="receipts" {% if request.GET.entry_type == "receipts" %}selected{% endif %}>Receipts</option>
+          <option value="payments" {% if request.GET.entry_type == "payments" %}selected{% endif %}>Payments</option>
+        </select>
+      </label>
+
+      <div class="brs-top-filter-item brs-top-filter-actions">
+        <button type="submit" class="cb-btn-primary">Search</button>
+      </div>
+    </div>
+  </form>
+
+  {% if selected_ledger and request.GET.entry_type %}
+  <div class="brs-box" style="margin-top:4px;">
+    <div class="brs-box-header-row">
+      <div class="brs-box-header">
+        <span>Reconciled Adjustments</span>
+        <span class="brs-box-subtitle">
+          Each block shows Cash Book lines first, Bank Entry lines below, and balance.
+        </span>
+      </div>
+
+      <div class="brs-header-filters">
+        <label class="brs-header-filter-item">
+          Amount search:
+          <input type="text" id="recon_amount_filter" class="cb-input" placeholder="Search amount">
+        </label>
+        <label class="brs-header-filter-item">
+          Cheque search:
+          <input type="text" id="recon_cheque_filter" class="cb-input" placeholder="Search cheque no.">
+        </label>
+      </div>
+    </div>
+
+    <div class="brs-box-body brs-scroll-body">
+      <table class="cb-table" id="recon-box">
+        <thead>
+          <tr>
+            <th class="cb-center cb-col-date">Date</th>
+            <th class="cb-center cb-col-type">Type</th>
+            <th class="cb-center cb-col-cheque">Cheque No.</th>
+            <th class="cb-center cb-col-narration">Narration</th>
+            <th class="cb-right cb-col-amount">Amount</th>
+            <th class="cb-center cb-col-source">Source / Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if adjustments %}
+            {% for adj in adjustments %}
+              {# Cash rows #}
+              {% for row in adj.cash_rows %}
+              <tr class="recon-row"
+                  data-amount="{{ row.amount }}"
+                  data-cheque="{{ row.cheque_no|default_if_none:''|upper }}">
+                <td class="cb-center">
+                  {{ row.entry_date|date:"d-m-Y" }}
+                </td>
+                <td class="cb-center">
+                  {{ row.entry_type }}
+                </td>
+                <td class="cb-center">
+                  {{ row.cheque_no|default:"-" }}
+                </td>
+                <td class="cb-narration-cell">
+                  {{ row.narration|default:"-" }}
+                </td>
+                <td class="cb-right">
+                  {{ row.amount|floatformat:2|intcomma }}
+                </td>
+                <td class="cb-center">
+                  {{ row.source }}
+                </td>
+              </tr>
+              {% endfor %}
+
+              {# Bank rows #}
+              {% for row in adj.bank_rows %}
+              <tr class="recon-row"
+                  data-amount="{{ row.amount }}"
+                  data-cheque="{{ row.cheque_no|default_if_none:''|upper }}">
+                <td class="cb-center">
+                  {{ row.entry_date|date:"d-m-Y" }}
+                </td>
+                <td class="cb-center">
+                  {{ row.entry_type }}
+                </td>
+                <td class="cb-center">
+                  {{ row.cheque_no|default:"-" }}
+                </td>
+                <td class="cb-narration-cell">
+                  {{ row.narration|default:"-" }}
+                </td>
+                <td class="cb-right">
+                  {{ row.amount|floatformat:2|intcomma }}
+                </td>
+                <td class="cb-center">
+                  {{ row.source }}
+                </td>
+              </tr>
+              {% endfor %}
+
+              {# Balance row: Cash - Bank + actions in Source column #}
+              <tr class="recon-row"
+                  data-amount="{{ adj.diff }}"
+                  data-cheque="">
+                <td class="cb-center"></td>
+                <td class="cb-center">
+                  Balance
+                </td>
+                <td class="cb-center"></td>
+                <td class="cb-narration-cell">
+                  Total Cash − Total Bank
+                </td>
+                <td class="cb-right" style="color:#22c55e;font-weight:600;">
+                  {{ adj.diff|floatformat:2|intcomma }}
+                </td>
+                <td class="cb-center">
+                  <div class="brs-actions-row">
+                    {# Edit allowed? #}
+                    {% if "BTN_ACCOUNTS_BRS_ADJUSTMENT_EDIT" in allowed_codes %}
+                      <a href="{% url 'accounts_brs_adjustment' %}?ledger_id={{ selected_ledger.id }}&entry_type={{ request.GET.entry_type }}&adjustment_id={{ adj.adjustment_id }}"
+                         class="brs-btn-edit">
+                        Edit
+                      </a>
+                    {% endif %}
+
+                    {# Undo allowed? #}
+                    {% if "BTN_ACCOUNTS_BRS_ADJUSTMENT_UNDO" in allowed_codes %}
+                      {% if adj.adjustment_id %}
+                        <form method="post"
+                              action="{% url 'accounts_brs_adjustment_undo' adj.adjustment_id %}"
+                              class="brs-undo-form">
+                          {% csrf_token %}
+                          <input type="hidden" name="ledger_id" value="{{ selected_ledger.id }}">
+                          <input type="hidden" name="entry_type" value="{{ request.GET.entry_type }}">
+                          <button type="submit"
+                                  class="brs-btn-undo"
+                                  onclick="return confirm('Undo this adjustment?');">
+                            Undo
+                          </button>
+                        </form>
+                      {% else %}
+                        <button type="button"
+                                class="brs-btn-undo"
+                                style="opacity:0.6;cursor:not-allowed;">
+                          Undo
+                        </button>
+                      {% endif %}
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" class="cb-center brs-empty">
+                No reconciled adjustments for selected filters.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <style>
+  .brs-top-filter-row {
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .brs-top-filter-item {
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    gap:4px;
+  }
+  .brs-top-label {
+    font-size:11px;
+    color:#e5e7eb;
+    margin-bottom:2px;
+  }
+  .brs-top-filter-item select {
+    min-width:180px;
+  }
+  .brs-top-filter-actions {
+    display:flex;
+    align-items:center;
+  }
+
+  .brs-box {
+    background:radial-gradient(circle at top left,#0b1220,#020617);
+    box-shadow:0 18px 40px rgba(0,0,0,0.9);
+    border:1px solid #37371f;
+    border-radius:4px;
+    padding:6px;
+  }
+
+  .brs-box-header-row {
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    align-items:flex-end;
+    margin-bottom:4px;
+    margin-top:-4px;
+  }
+  .brs-box-header {
+    display:flex;
+    flex-direction:column;
+    font-size:11px;
+    color:#f9fafb;
+  }
+  .brs-box-header > span:first-child {
+    font-weight:600;
+  }
+  .brs-box-subtitle {
+    font-size:10px;
+    color:#9ca3af;
+  }
+
+  .brs-header-filters {
+    display:flex;
+    gap:10px;
+    align-items:flex-end;
+  }
+  .brs-header-filter-item {
+    display:flex;
+    flex-direction:column;
+    font-size:10px;
+  }
+
+  .brs-box-body {
+    border-top:1px solid #1f2937;
+    padding-top:2px;
+  }
+
+  .brs-scroll-body {
+    max-height:60vh;
+    overflow-y:auto;
+    overflow-x:hidden;
+    position:relative;
+  }
+
+  .cb-table {
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+    font-size:11px;
+    color:#e5e7eb;
+    margin-top:-4px;
+  }
+  .cb-table th,
+  .cb-table td {
+    border-top:1px solid #0266f1;
+    border-bottom:1px solid #0350f6;
+    padding:3px 4px;
+  }
+
+  .cb-table thead th {
+    position:sticky;
+    top:0;
+    z-index:2;
+    background:linear-gradient(90deg,#0b1120,#1d4ed8);
+    font-weight:500;
+    font-size:11px;
+    color:#f9fafb;
+    text-transform:uppercase;
+    letterspacing:0.08em;
+  }
+
+  .cb-center { text-align:center; white-space:nowrap; }
+  .cb-right  { text-align:right;  white-space:nowrap; }
+
+  .cb-col-date      { width:15px;  }
+  .cb-col-type      { width:10px;  }
+  .cb-col-cheque    { width:30px;  }
+  .cb-col-amount    { width:90px;  }
+  .cb-col-narration { width:500px; }
+  .cb-col-source    { width:20px; }
+
+  .cb-narration-cell {
+    width:260px;
+    max-width:260px;
+    white-space:normal !important;
+    overflow-wrap:break-word;
+    word-break:break-word;
+  }
+
+  .brs-empty {
+    font-size:10px;
+    color:#6b7280;
+  }
+
+  /* Actions row: Edit + Undo side by side */
+  .brs-actions-row {
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:4px;
+    flex-wrap:wrap;
+  }
+
+  .brs-undo-form {
+    margin:0;
+  }
+
+  /* Small tab-style buttons: Edit = green, Undo = red */
+  .brs-btn-edit {
+    display:inline-block;
+    min-width:48px;
+    padding:2px 6px;
+    background:#16a34a;
+    border:1px solid #16a34a;
+    color:#f9fafb !important;
+    text-align:center;
+    border-radius:3px;
+    font-size:10px;
+    text-decoration:none;
+  }
+  .brs-btn-edit:hover {
+    background:#15803d;
+    border-color:#15803d;
+  }
+
+  .brs-btn-undo {
+    display:inline-block;
+    min-width:48px;
+    padding:2px 6px;
+    background:#dc2626;
+    border:1px solid #dc2626;
+    color:#f9fafb;
+    text-align:center;
+    border-radius:3px;
+    font-size:10px;
+  }
+  .brs-btn-undo:hover {
+    background:#b91c1c;
+    border-color:#b91c1c;
+  }
+  </style>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const amountInput = document.getElementById('recon_amount_filter');
+    const chequeInput = document.getElementById('recon_cheque_filter');
+    const table = document.getElementById('recon-box');
+
+    function parseAmount(row) {
+      const val = row.getAttribute('data-amount');
+      if (!val) return 0;
+      const num = Number(val.toString().replace(/,/g, ''));
+      return isNaN(num) ? 0 : num;
+    }
+
+    function filterByAmount() {
+      if (!table || !amountInput) return;
+      const query = (amountInput.value || '').replace(/,/g, '').trim();
+      const rows = table.querySelectorAll('tbody tr.recon-row');
+      if (!query) {
+        rows.forEach(r => r.style.display = '');
+        return;
+      }
+      rows.forEach(row => {
+        const amt = parseAmount(row);
+        const amtText = Number(amt).toFixed(2).replace(/,/g, '');
+        row.style.display = amtText.indexOf(query) !== -1 ? '' : 'none';
+      });
+    }
+
+    function filterByCheque() {
+      if (!table || !chequeInput) return;
+      const query = (chequeInput.value || '').toUpperCase().trim();
+      const rows = table.querySelectorAll('tbody tr.recon-row');
+      if (!query) {
+        rows.forEach(r => r.style.display = '');
+        return;
+      }
+      rows.forEach(row => {
+        const chq = (row.getAttribute('data-cheque') || '').toUpperCase();
+        row.style.display = chq.indexOf(query) !== -1 ? '' : 'none';
+      });
+    }
+
+    if (amountInput) amountInput.addEventListener('input', filterByAmount);
+    if (chequeInput) chequeInput.addEventListener('input', filterByCheque);
+  });
+  </script>
+{% endblock %}

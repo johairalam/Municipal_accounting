@@ -1,0 +1,185 @@
+{% extends "dashboards/base_root_dashboard.html" %}
+
+{% block title %}Create ULB | Muni Dashboard{% endblock %}
+
+{% block content %}
+<div class="card">
+
+    <!-- top-center floating messages -->
+    {% if messages %}
+    <div id="message-container"
+         style="
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1050;
+            min-width: 300px;
+         ">
+        {% for message in messages %}
+            {% if message.tags == 'success' %}
+                <!-- green italic text only -->
+                <div class="text-center mb-2"
+                     style="font-style: italic; color: #198754;">
+                    {{ message }}
+                </div>
+            {% elif message.tags == 'error' %}
+                <!-- red italic text only -->
+                <div class="text-center mb-2"
+                     style="font-style: italic; color: #dc3545;">
+                    {{ message }}
+                </div>
+            {% else %}
+                <!-- default italic text (gray/black) -->
+                <div class="text-center mb-2"
+                     style="font-style: italic; color: #212529;">
+                    {{ message }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <h2 style="font-size:18px; margin-bottom:12px;">Create ULB</h2>
+    <form method="post">
+        {% csrf_token %}
+        <!-- add left margin to the whole grid so fields move right -->
+        <div class="form-grid ms-5" style="margin-left: 100px;">
+
+            <div class="form-group">
+                <label class="required-label" for="id_ulb_name">ULB Name</label>
+                <input type="text" id="id_ulb_name" name="ulb_name"
+                       class="form-control"
+                       style="max-width: 400px;"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label class="required-label" for="id_ulb_type">ULB Type</label>
+                <select id="id_ulb_type" name="ulb_type"
+                        class="form-control"
+                        style="max-width: 400px;"
+                        required>
+                    <option value="">Select ULB Type</option>
+                    <option value="NAGAR_NIGAM">Nagar Nigam</option>
+                    <option value="NAGAR_PARISHAD">Nagar Parishad</option>
+                    <option value="NAGAR_PANCHAYAT">Nagar Panchayat</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="required-label" for="id_email">Email ID</label>
+                <input type="email" id="id_email" name="email"
+                       class="form-control"
+                       style="max-width: 400px;"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label for="id_pan">PAN No. (if available)</label>
+                <input type="text" id="id_pan" name="pan_no"
+                       class="form-control"
+                       style="max-width: 400px;">
+            </div>
+
+            <div class="form-group">
+                <label class="required-label" for="id_tin">TIN No.</label>
+                <input type="text" id="id_tin" name="tin_no"
+                       class="form-control"
+                       style="max-width: 400px;"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label class="required-label" for="id_gst">GST No.</label>
+                <input type="text" id="id_gst" name="gst_no"
+                       class="form-control"
+                       style="max-width: 400px;"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label class="required-label" for="id_landmark">Land Mark</label>
+                <input type="text" id="id_landmark" name="land_mark"
+                       class="form-control"
+                       style="max-width: 400px;"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label class="required-label" for="id_district">District</label>
+                <input type="text" id="id_district" name="district"
+                       class="form-control"
+                       style="max-width: 400px;"
+                       required>
+            </div>
+
+            <!-- State + Date of Creation side by side -->
+            <div class="form-group" style="display: flex; gap: 10px;">
+                <div>
+                    <label class="required-label" for="id_state">State</label>
+                    <input type="text" id="id_state" name="state"
+                           class="form-control"
+                           style="width: 195px;"
+                           required>
+                </div>
+
+                <div>
+                    <label class="required-label" for="id_date_of_creation">Date of Creation</label>
+                    <input type="date" id="id_date_of_creation" name="date_of_creation"
+                           class="form-control"
+                           style="width: 195px;"
+                           required>
+                </div>
+            </div>
+
+            <!-- Country + ULB Code side by side -->
+            <div class="form-group" style="display: flex; gap: 10px;">
+                <div>
+                    <label class="required-label" for="id_country">Country</label>
+                    <input type="text" id="id_country" name="country"
+                           class="form-control"
+                           style="width: 195px;"
+                           required>
+                </div>
+
+                <div>
+                    <label class="required-label" for="id_ulb_code">ULB Code</label>
+                    <input type="text" id="id_ulb_code" name="ulb_code"
+                           class="form-control"
+                           style="width: 195px;"
+                           maxlength="10"
+                           placeholder="e.g. DNP"
+                           required>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Save button centered below -->
+        <div class="form-actions mt-3 mb-2" style="text-align: center !important;">
+            <button type="submit"
+                    class="btn btn-primary px-4"
+                    style="display: inline-block; margin: 0 auto;">
+                Save
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- auto-hide messages after 1.5s -->
+<script>
+    setTimeout(function() {
+        var container = document.getElementById('message-container');
+        if (container) {
+            container.style.transition = 'opacity 0.3s ease';
+            container.style.opacity = '0';
+            setTimeout(function() {
+                if (container && container.parentNode) {
+                    container.parentNode.removeChild(container);
+                }
+            }, 300);
+        }
+    }, 1500);
+</script>
+{% endblock %}

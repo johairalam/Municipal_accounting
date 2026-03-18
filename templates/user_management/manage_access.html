@@ -1,0 +1,278 @@
+{% extends "dashboards/base_root_dashboard.html" %}
+
+{% block title %}Manage Access | Muni Dashboard{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+<div id="message-container"
+     style="
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1050;
+        min-width: 300px;
+     ">
+    {% for message in messages %}
+        {% if message.tags == 'success' %}
+            <div class="text-center mb-2"
+                 style="font-style: italic; color: #198754;">
+                {{ message }}
+            </div>
+        {% elif message.tags == 'error' %}
+            <div class="text-center mb-2"
+                 style="font-style: italic; color: #dc3545;">
+                {{ message }}
+            </div>
+        {% else %}
+            <div class="text-center mb-2"
+                 style="font-style: italic; color: #212529;">
+                {{ message }}
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="card" style="max-height: calc(85vh - 100px); overflow-y: auto;">
+    <h2 style="font-size:18px; margin-bottom:12px;">Manage Access</h2>
+
+    <form method="post" id="access-form">
+        {% csrf_token %}
+
+        <!-- Step 1: select user -->
+        <div style="display:flex; gap:16px; margin-bottom:12px; align-items:flex-end; flex-wrap:wrap;">
+            <div>
+                <label for="user-select" style="font-size:13px;">Select User</label>
+                <select id="user-select" name="user"
+                        style="margin-left:8px; padding:4px 8px; width:400px; border-radius:6px; border:1px solid #4b5563; background:#020617; color:#e5e7eb;">
+                    <option value="">-- choose --</option>
+                    {% for u in users %}
+                        <option value="{{ u.id }}"
+                                {% if selected_user and u.id == selected_user.id %}selected{% endif %}>
+                            {{ u.username }} ({{ u.role }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Search button: loads ULB boxes for this user -->
+            <button type="submit" name="action" value="search_user"
+                    style="padding:6px 14px; border-radius:999px; border:1px solid #4b5563; background:rgb(5, 130, 87); color:#e5e7eb; font-size:12px; cursor:pointer;">
+                Search
+            </button>
+        </div>
+
+        {# STEP 1 RESULT: ULB assignment boxes (only when user selected) #}
+        {% if selected_user %}
+            <h3 style="font-size:14px; margin:8px 0;">Step 1: Assign ULBs to {{ selected_user.username }}</h3>
+
+            <div style="display:flex; gap:16px; margin-top:6px;">
+                <!-- Available ULBs -->
+                <div style="flex:1;">
+                    <div style="font-size:13px; margin-bottom:4px;">Available ULBs</div>
+
+                    <input type="text"
+                           id="search-ulb-available"
+                           placeholder="Search..."
+                           onkeyup="filterOptions('search-ulb-available','ulb-available');"
+                           style="width:100%; margin-bottom:6px; padding:3px 6px; border-radius:6px; border:1px solid #4b5563; background:#020617; color:#e5e7eb; font-size:12px;">
+
+                    <select id="ulb-available" multiple size="8"
+                            style="width:100%; padding:4px; border-radius:8px; border:1px solid #4b5563; background:#020617; color:#e5e7eb;">
+                        {% for ulb in available_ulbs %}
+                            <option value="{{ ulb.id }}">{{ ulb.ulb_name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <button type="button"
+                            onclick="selectAllIn('ulb-available');"
+                            style="margin-top:4px; padding:3px 8px; border-radius:999px; border:1px solid #4b5563; background:transparent; color:#e5e7eb; font-size:11px; cursor:pointer;">
+                        Select all
+                    </button>
+                </div>
+
+                <!-- Move buttons -->
+                <div style="display:flex; flex-direction:column; justify-content:center; gap:6px;">
+                    <button type="button" onclick="moveSelected('ulb-available','ulb-assigned');"
+                            style="padding:4px 10px; border-radius:999px; border:1px solid #4b5563; background:transparent; color:#e5e7eb; font-size:11px; cursor:pointer;">
+                        &gt;&gt;
+                    </button>
+                    <button type="button" onclick="moveSelected('ulb-assigned','ulb-available');"
+                            style="padding:4px 10px; border-radius:999px; border:1px solid #4b5563; background:transparent; color:#e5e7eb; font-size:11px; cursor:pointer;">
+                        &lt;&lt;
+                    </button>
+                </div>
+
+                <!-- Assigned ULBs -->
+                <div style="flex:1;">
+                    <div style="font-size:13px; margin-bottom:4px;">Assigned ULBs</div>
+
+                    <input type="text"
+                           id="search-ulb-assigned"
+                           placeholder="Search..."
+                           onkeyup="filterOptions('search-ulb-assigned','ulb-assigned');"
+                           style="width:100%; margin-bottom:6px; padding:3px 6px; border-radius:6px; border:1px solid #4b5563; background:#020617; color:#e5e7eb; font-size:12px;">
+
+                    <select id="ulb-assigned" name="assigned_ulbs" multiple size="8"
+                            style="width:100%; padding:4px; border-radius:8px; border:1px solid #4b5563; background:#020617; color:#e5e7eb;">
+                        {% for ulb in assigned_ulbs %}
+                            <option value="{{ ulb.id }}">{{ ulb.ulb_name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <button type="button"
+                            onclick="selectAllIn('ulb-assigned');"
+                            style="margin-top:4px; padding:3px 8px; border-radius:999px; border:1px solid #4b5563; background:transparent; color:#e5e7eb; font-size:11px; cursor:pointer;">
+                        Select all
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-top:8px; text-align:center;">
+                <button type="submit" name="action" value="save_ulbs"
+                        onclick="selectAllIn('ulb-assigned');"
+                        style="padding:6px 18px; border-radius:999px; border:none; background:linear-gradient(120deg,#22c55e,#0ea5e9); color:#020617; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer;">
+                    Save ULB Permissions
+                </button>
+            </div>
+        {% endif %}
+
+        {# STEP 2: menu/button permissions for selected ULB #}
+        {% if selected_user and assigned_ulbs %}
+            <hr style="margin:18px 0; border-color:#4b5563;">
+
+            <h3 style="font-size:14px; margin-bottom:6px;">Step 2: Menu/Button permissions for ULB</h3>
+
+            <!-- ULB dropdown from assigned_ulbs -->
+            <div style="display:flex; gap:8px; align-items:flex-end; margin-bottom:8px;">
+                <div>
+                    <label for="ulb-perm-select" style="font-size:13px;">Select ULB</label>
+                    <select id="ulb-perm-select" name="perm_ulb"
+                            style="margin-left:8px; padding:4px 8px; width: 400px; border-radius:6px; border:1px solid #4b5563; background:#020617; color:#e5e7eb;">
+                        <option value="">-- choose --</option>
+                        {% for ulb in assigned_ulbs %}
+                            <option value="{{ ulb.id }}"
+                                    {% if selected_perm_ulb and ulb.id == selected_perm_ulb.id %}selected{% endif %}>
+                                {{ ulb.ulb_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit" name="action" value="search_ulb_permissions"
+                        style="padding:6px 14px; border-radius:999px; border:1px solid #4b5563; background:rgb(5, 130, 87); color:#e5e7eb; font-size:12px; cursor:pointer;">
+                    Search
+                </button>
+            </div>
+
+            {% if selected_perm_ulb %}
+                <div style="display:flex; gap:16px; margin-top:6px;">
+                    <!-- Available permissions -->
+                    <div style="flex:1;">
+                        <div style="font-size:13px; margin-bottom:4px;">Available permissions</div>
+
+                        <input type="text"
+                               id="search-available"
+                               placeholder="Search..."
+                               onkeyup="filterOptions('search-available','available');"
+                               style="width:100%; margin-bottom:6px; padding:3px 6px; border-radius:6px; border:1px solid #4b5563; background:#020617; color:#e5e7eb; font-size:12px;">
+
+                        <select id="available" multiple size="10"
+                                style="width:100%; padding:4px; border-radius:8px; border:1px solid #4b5563; background:#020617; color:#e5e7eb;">
+                            {% for code, label in perm_available %}
+                                <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <button type="button"
+                                onclick="selectAllIn('available');"
+                                style="margin-top:4px; padding:3px 8px; border-radius:999px; border:1px solid #4b5563; background:transparent; color:#e5e7eb; font-size:11px; cursor:pointer;">
+                            Select all
+                        </button>
+                    </div>
+
+                    <!-- Move buttons -->
+                    <div style="display:flex; flex-direction:column; justify-content:center; gap:6px;">
+                        <button type="button" onclick="moveSelected('available','assigned');"
+                                style="padding:4px 10px; border-radius:999px; border:1px solid #4b5563; background:transparent; color:#e5e7eb; font-size:11px; cursor:pointer;">
+                            &gt;&gt;
+                        </button>
+                        <button type="button" onclick="moveSelected('assigned','available');"
+                                style="padding:4px 10px; border-radius:999px; border:1px solid #4b5563; background:transparent; color:#e5e7eb; font-size:11px; cursor:pointer;">
+                            &lt;&lt;
+                        </button>
+                    </div>
+
+                    <!-- Assigned permissions -->
+                    <div style="flex:1;">
+                        <div style="font-size:13px; margin-bottom:4px;">Assigned permissions</div>
+
+                        <input type="text"
+                               id="search-assigned"
+                               placeholder="Search..."
+                               onkeyup="filterOptions('search-assigned','assigned');"
+                               style="width:100%; margin-bottom:6px; padding:3px 6px; border-radius:6px; border:1px solid #4b5563; background:#020617; color:#e5e7eb; font-size:12px;">
+
+                        <select id="assigned" name="assigned_permissions" multiple size="10"
+                                style="width:100%; padding:4px; border-radius:8px; border:1px solid #4b5563; background:#020617; color:#e5e7eb;">
+                            {% for code, label in perm_assigned %}
+                                <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <button type="button"
+                                onclick="selectAllIn('assigned');"
+                                style="margin-top:4px; padding:3px 8px; border-radius:999px; border:1px solid #4b5563; background:transparent; color:#e5e7eb; font-size:11px; cursor:pointer;">
+                            Select all
+                        </button>
+                    </div>
+                </div>
+
+                <div style="margin-top:8px; text-align:center;">
+                    <button type="submit" name="action" value="save_permissions"
+                            onclick="selectAllIn('assigned');"
+                            style="padding:6px 18px; border-radius:999px; border:none; background:linear-gradient(120deg,#22c55e,#0ea5e9); color:#020617; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer;">
+                        Save Menu/Button Permissions
+                    </button>
+                </div>
+            {% endif %}
+        {% endif %}
+    </form>
+</div>
+
+<script>
+function moveSelected(fromId, toId) {
+    const from = document.getElementById(fromId);
+    const to = document.getElementById(toId);
+    Array.from(from.selectedOptions).forEach(opt => {
+        from.removeChild(opt);
+        to.appendChild(opt);
+    });
+}
+
+function selectAllIn(selectId) {
+    const sel = document.getElementById(selectId);
+    Array.from(sel.options).forEach(opt => opt.selected = true);
+}
+
+function filterOptions(inputId, selectId) {
+    const query = document.getElementById(inputId).value.toLowerCase();
+    const sel = document.getElementById(selectId);
+    Array.from(sel.options).forEach(opt => {
+        const text = opt.text.toLowerCase();
+        opt.style.display = text.includes(query) ? '' : 'none';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('message-container');
+    if (container) {
+        setTimeout(function() {
+            container.style.display = 'none';
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}

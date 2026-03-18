@@ -1,0 +1,371 @@
+{% extends "accounts/base_accounts_dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+
+{% block accounts_content %}
+<div class="trial-balance-page">
+  <h2 style="text-align:center; font-weight:bold; margin-top: -20px; color: #fae050;; margin-bottom:6px;">
+    Trial Balance
+  </h2>
+  <!-- Filter & Export Bar -->
+  <form id="tb-filter-form" method="get" class="tb-filter-bar">
+    <label>
+      From:
+      <input type="date" name="from_date" value="{{ from_date|date:'Y-m-d' }}">
+    </label>
+    <label>
+      To:
+      <input type="date" name="to_date" value="{{ to_date|date:'Y-m-d' }}">
+    </label>
+    <button type="submit">Filter</button>
+
+    <button type="submit" formaction="{% url 'trial_balance_export_excel' %}">
+      Export to Excel
+    </button>
+  </form>
+
+  <!-- Trial Balance Table -->
+  <div class="tb-table-wrapper">
+    <table id="trial-balance-table" class="tb-table">
+      <thead>
+        <tr>
+          <th style="width:40%;">Particulars</th>
+          <th style="width:15%;">Opening Balance</th>
+          <th style="width:15%;">Dr Amount</th>
+          <th style="width:15%;">Cr Amount</th>
+          <th style="width:15%;">Closing Balance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for head in groups_tree %}
+          {% include "accounts/_tb_row.html" with node=head level=0 %}
+        {% empty %}
+          <tr>
+            <td colspan="5" style="text-align:center;">No data for selected period.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr id="tb-grand-total-row">
+          <th>Grand Total</th>
+          <th id="tb-grand-opening"></th>
+          <th id="tb-grand-dr"></th>
+          <th id="tb-grand-cr"></th>
+          <th id="tb-grand-closing"></th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<style>
+.trial-balance-page {
+  padding: 8px 0 0 0;
+  height: 100%;
+}
+
+/* Filter bar */
+.tb-filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+
+.tb-filter-bar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tb-filter-bar input[type="date"] {
+  padding: 4px 8px;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  font-size: 12px;
+  background-color: #020617;
+  color: #e5e7eb;
+}
+
+.tb-filter-bar button {
+  padding: 5px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid #288cfa;
+  background: linear-gradient(90deg, #288cfa, #22c55e);
+  color: #020617;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(40,140,250,0.6);
+}
+
+.tb-filter-bar button:hover {
+  filter: brightness(1.05);
+}
+
+/* Table wrapper */
+.tb-table-wrapper {
+  position: relative;
+  max-height: calc(100vh - 170px);
+  overflow: auto;
+  border-radius: 0px;
+  background: radial-gradient(circle at top left, #0b1220, #020617);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.9);
+  border: 1px solid #1f2937;
+}
+
+/* Table */
+.tb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+
+.tb-table th,
+.tb-table td {
+  border: 1px solid #f9cf01;
+  padding: 7px 9px;
+}
+
+/* Header */
+.tb-table thead th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(90deg, #0b1120, #1d4ed8);
+  z-index: 2;
+  font-weight: 600;
+  color: #f9fafb;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+}
+
+/* Footer (grand total) */
+.tb-table tfoot tr {
+  position: sticky;
+  bottom: 0;
+  background: #020617;
+  font-weight: 700;
+  z-index: 1;
+  color: #fcc602;
+  letter-spacing: 0.10em;
+  text-align: right;
+}
+
+/* Base rows */
+.tb-table tbody tr {
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+/* Hover row color (cursor row different color) */
+.tb-table tbody tr:hover {
+  background-color: rgba(59,130,246,0.35);
+  box-shadow: 0 0 8px rgba(59,130,246,0.7);
+  transform: translateY(-1px);
+}
+
+/* Particulars cell */
+.tb-particular {
+  display: flex;
+  align-items: center;
+}
+
+/* Expand / collapse button */
+.tb-toggle-btn {
+  border: none;
+  background: #1d4ed8;
+  cursor: pointer;
+  margin-right: 6px;
+  font-size: 11px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #e5e7eb;
+}
+
+.tb-toggle-btn[aria-expanded="false"]::before {
+  content: "▶";
+}
+
+.tb-toggle-btn[aria-expanded="true"]::before {
+  content: "▼";
+}
+
+/* Hide children when collapsed */
+.tb-row-hidden {
+  display: none;
+}
+
+/* Numbers alignment */
+.tb-num {
+  text-align: right;
+  white-space: nowrap;
+  color: #e5e7eb;
+}
+
+.tb-suspense-row {
+  border-left: 3px solid #f97316;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const table = document.getElementById('trial-balance-table');
+  if (!table) return;
+
+  // helper: Indian format
+  function formatIndian(num) {
+    if (num === null || num === undefined || num === "") return "";
+    const n = Number(num);
+    if (isNaN(n)) return "";
+    return n.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  // Level colors
+  const HEAD_BG   = 'linear-gradient(90deg, #0b1120, #1d4ed8)';
+  const MAIN_BG   = 'linear-gradient(90deg, #022c22, #0f766e)';
+  const SUB_BG    = 'linear-gradient(90deg, #312e81, #4c1d95)';
+  const GROUP_BG  = 'linear-gradient(90deg, #1f2937, #374151)';
+  const LEDGER_BG = 'linear-gradient(90deg, #020617, #111827)';
+
+  // Color rows based on nesting depth using margin-left from .tb-particular
+  const bodyRows = table.querySelectorAll('tbody tr');
+  bodyRows.forEach(function (row) {
+    const partic = row.querySelector('.tb-particular');
+    if (!partic) return;
+
+    const styleAttr = partic.getAttribute('style') || '';
+    let depth = 0;
+    const match = styleAttr.match(/margin-left:\s*([0-9.]+)em/);
+    if (match) depth = parseFloat(match[1]);
+
+    if (depth < 0.5) {
+      row.style.background = HEAD_BG;
+      row.style.fontWeight = '700';
+    } else if (depth >= 0.5 && depth < 1.5) {
+      row.style.background = MAIN_BG;
+    } else if (depth >= 1.5 && depth < 2.5) {
+      row.style.background = SUB_BG;
+    } else if (depth >= 2.5 && depth < 3.5) {
+      row.style.background = GROUP_BG;
+    } else if (depth >= 3.5) {
+      row.style.background = LEDGER_BG;
+    }
+  });
+
+  table.addEventListener('click', function (e) {
+    const btn = e.target.closest('.tb-toggle-btn');
+    if (!btn) return;
+
+    const rowId = btn.dataset.rowId;
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+
+    toggleChildren(rowId, !expanded);
+    recalcGrandTotals();
+    formatAllAmountCells();
+  });
+
+  function toggleChildren(parentId, show) {
+    const rows = table.querySelectorAll('tr[data-parent-id="' + parentId + '"]');
+    rows.forEach(function (row) {
+      if (show) {
+        row.classList.remove('tb-row-hidden');
+      } else {
+        row.classList.add('tb-row-hidden');
+      }
+      const childId = row.dataset.rowId;
+      if (!show) {
+        toggleChildren(childId, false);
+        const btn = row.querySelector('.tb-toggle-btn');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  // Grand total only from head groups (data-parent-id="")
+  function recalcGrandTotals() {
+    let totalOpening = 0;
+    let totalDr = 0;
+    let totalCr = 0;
+    let totalClosing = 0;
+
+    const rows = table.querySelectorAll('tbody tr[data-parent-id=""]');
+    rows.forEach(function (row) {
+      const opVal = parseFloat(row.dataset.openingSigned || "0");
+      const drVal = parseFloat(row.dataset.drSigned || "0");
+      const crVal = parseFloat(row.dataset.crSigned || "0");
+      const clVal = parseFloat(row.dataset.closingSigned || "0");
+
+      totalOpening += opVal;
+      totalDr += drVal;
+      totalCr += crVal;
+      totalClosing += clVal;
+    });
+
+    const openingType = totalOpening < 0 ? "Cr" : "Dr";
+    const openingAbs = Math.abs(totalOpening);
+    const closingType = totalClosing < 0 ? "Cr" : "Dr";
+    const closingAbs = Math.abs(totalClosing);
+
+    const gtOpening = document.getElementById('tb-grand-opening');
+    const gtDr = document.getElementById('tb-grand-dr');
+    const gtCr = document.getElementById('tb-grand-cr');
+    const gtClosing = document.getElementById('tb-grand-closing');
+
+    if (gtOpening) gtOpening.textContent = openingAbs
+      ? formatIndian(openingAbs) + " " + openingType
+      : "";
+    if (gtDr) gtDr.textContent = totalDr
+      ? formatIndian(totalDr) + " Dr"
+      : "";
+    if (gtCr) gtCr.textContent = totalCr
+      ? formatIndian(totalCr) + " Cr"
+      : "";
+    if (gtClosing) gtClosing.textContent = closingAbs
+      ? formatIndian(closingAbs) + " " + closingType
+      : "";
+  }
+  // Format all numeric cells (class tb-num) as Indian style
+  function formatAllAmountCells() {
+    const numCells = table.querySelectorAll('.tb-num');
+    numCells.forEach(function (cell) {
+      const raw = cell.getAttribute('data-raw-amount');
+      const suffix = cell.getAttribute('data-suffix') || "";
+
+      if (raw === null || raw === "") {
+        cell.textContent = "";
+        return;
+      }
+      const n = Number(raw);
+      if (isNaN(n)) {
+        return;
+      }
+      const formatted = formatIndian(n);
+
+      // Only Opening (2nd column) and Closing (5th column) show DR/CR text
+      const colIndex = cell.cellIndex; // 0-based
+      if (colIndex === 1 || colIndex === 4) {
+        cell.textContent = suffix
+          ? formatted + " " + suffix
+          : formatted;
+      } else {
+        cell.textContent = formatted;
+      }
+    });
+  }
+  // initial format and totals
+  formatAllAmountCells();
+  recalcGrandTotals();
+});
+</script>
+{% endblock %}

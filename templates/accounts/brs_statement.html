@@ -1,0 +1,589 @@
+{% extends "accounts/base_brs.html" %}
+{% load static %}
+{% load humanize %}
+
+{# Hide title in PDF, show on screen #}
+{% block brs_title %}
+  {% if not is_pdf %}
+    BRS STATEMENT
+  {% endif %}
+{% endblock %}
+
+{% block brs_content %}
+
+{% if is_pdf %}
+  <div style="text-align:center; margin-bottom:10px;">
+    <h2 style="margin:2px 0; color:#f8e303; font-size:20px;">Bank Reconciliation Statement</h2>
+    <h3 style="margin:2px 0; color:#000; font-size:16px;">{{ current_ulb_name }}</h3>
+    <h4 style="margin:2px 0; color:#000; font-size:14px;">
+      For the month of {{ month_name }} {{ year }}
+    </h4>
+    <h5 style="margin:2px 0; color:#000; font-size:14px;">{{ selected_ledger.name }}</h5>
+  </div>
+{% endif %}
+
+{% if not is_pdf %}
+<form method="get" class="cb-filter-bar">
+  <div class="cb-filter-row brs-top-filter-row">
+    <label class="brs-top-filter-item">
+      <span class="brs-top-label">Ledger (450)</span>
+      <select name="ledger_id" class="cb-select cb-input" required>
+        <option value="">-- Select bank ledger (450...) --</option>
+        {% for ledger in ledgers %}
+          <option value="{{ ledger.id }}"
+                  {% if request.GET.ledger_id == ledger.id|stringformat:"s" %}selected{% endif %}>
+            {{ ledger.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label class="brs-top-filter-item">
+      <span class="brs-top-label">Month</span>
+      <select name="month" class="cb-select cb-input" required>
+        <option value="">-- Month --</option>
+        <option value="1" {% if month == 1 %}selected{% endif %}>January</option>
+        <option value="2" {% if month == 2 %}selected{% endif %}>February</option>
+        <option value="3" {% if month == 3 %}selected{% endif %}>March</option>
+        <option value="4" {% if month == 4 %}selected{% endif %}>April</option>
+        <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
+        <option value="6" {% if month == 6 %}selected{% endif %}>June</option>
+        <option value="7" {% if month == 7 %}selected{% endif %}>July</option>
+        <option value="8" {% if month == 8 %}selected{% endif %}>August</option>
+        <option value="9" {% if month == 9 %}selected{% endif %}>September</option>
+        <option value="10" {% if month == 10 %}selected{% endif %}>October</option>
+        <option value="11" {% if month == 11 %}selected{% endif %}>November</option>
+        <option value="12" {% if month == 12 %}selected{% endif %}>December</option>
+      </select>
+    </label>
+
+    <label class="brs-top-filter-item">
+      <span class="brs-top-label">Year</span>
+      <input type="number"
+             name="year"
+             class="cb-input"
+             min="2000"
+             max="2099"
+             value="{{ year|default:default_year }}">
+    </label>
+
+    <div class="brs-top-filter-item brs-top-filter-actions">
+      <button type="submit" class="cb-btn-primary">Search</button>
+
+      {% if "BTN_ACCOUNTS_BRS_STATEMENT_EDIT" in allowed_codes %}
+      <button type="button"
+              id="brs-edit-btn"
+              class="cb-btn-secondary"
+              style="background-color: rgb(5, 182, 20);">
+        Edit
+      </button>
+      {% endif %}
+
+      {% if "BTN_ACCOUNTS_BRS_STATEMENT_PDF" in allowed_codes and selected_ledger %}
+      <a href="{% url 'accounts_brs_statement' %}?ledger_id={{ selected_ledger.id }}&month={{ month }}&year={{ year }}&format=pdf"
+         class="cb-btn-secondary"
+         style="text-decoration:none; background-color: rgb(107, 5, 105); display:inline-block;">
+        Export PDF
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</form>
+{% endif %}
+
+{% if selected_ledger and month and year %}
+<form method="{% if is_pdf %}get{% else %}post{% endif %}"
+      id="brs-statement-form"
+      class="brs-page"
+      {% if not is_pdf %}onsubmit="return confirm('Do you want to save this BRS statement?');"{% endif %}>
+
+  {% if not is_pdf %}
+    {% csrf_token %}
+    <input type="hidden" name="ledger_id" value="{{ selected_ledger.id }}">
+    <input type="hidden" name="month" value="{{ month }}">
+    <input type="hidden" name="year" value="{{ year }}">
+  {% endif %}
+
+  <div class="brs-content-area">
+    <div class="brs-box">
+      <div class="brs-box-header", style="text-align: center;">
+        {% if not is_pdf %}
+        <span>BANK RECONCILIATION STATEMENT</span>
+        <span class="brs-box-subtitle" style="color: #f6bd03;">
+          For the month of {{ month_name }} {{ year }} – {{ selected_ledger.name }}
+        </span>
+        {% endif %}
+      </div>
+
+      <div class="brs-box-body brs-scroll-body">
+        <table class="cb-table">
+          <thead>
+            <tr>
+              <th class="cb-center cb-col-date">DATE</th>
+              <th class="cb-center cb-col-particulars">PARTICULARS</th>
+              <th class="cb-center cb-col-voucher">VOUCHER NO.</th>
+              <th class="cb-center cb-col-cheque">CHEQUE NO.</th>
+              <th class="cb-right cb-col-amount">AMOUNT</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <tr>
+              <td class="cb-center">
+                {{ closing_cashbook_date|date:"d-m-Y" }}
+              </td>
+              <td>
+                Closing Balance as per Cash Book as on {{ closing_cashbook_date|date:"d-m-Y" }}
+              </td>
+              <td class="cb-center">—</td>
+              <td class="cb-center">—</td>
+              <td class="cb-right">
+                {{ closing_cashbook_amount_display }}
+              </td>
+            </tr>
+
+            <tr class="brs-category-row">
+              <td></td>
+              <td><strong>Less: Amount Debited in Cash Book but not Credited in Pass Book</strong></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+
+            {% if less_cb_not_pb %}
+              {% for row in less_cb_not_pb %}
+              <tr>
+                <td class="cb-center">
+                  {{ row.date|date:"d-m-Y" }}
+                </td>
+                <td>
+                  {% if is_pdf %}
+                    {{ row.particulars }}
+                  {% else %}
+                    <input type="text"
+                           name="less_cb_not_pb_{{ forloop.counter }}_particulars"
+                           class="cb-input cb-input-particulars"
+                           value="{{ row.particulars }}"
+                           {% if row.particulars %}readonly{% endif %}>
+                  {% endif %}
+                </td>
+                <td class="cb-center">
+                  {{ row.voucher_no }}
+                </td>
+                <td class="cb-center">
+                  {{ row.cheque_no }}
+                </td>
+                <td class="cb-right">
+                  {{ row.amount_display }}
+                </td>
+              </tr>
+              {% endfor %}
+            {% endif %}
+
+            <tr class="brs-category-row">
+              <td></td>
+              <td><strong>Add: Amount Credited in Cash Book but not Debited in Pass Book</strong></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+
+            {% if add_cb_not_pb %}
+              {% for row in add_cb_not_pb %}
+              <tr>
+                <td class="cb-center">
+                  {{ row.date|date:"d-m-Y" }}
+                </td>
+                <td>
+                  {% if is_pdf %}
+                    {{ row.particulars }}
+                  {% else %}
+                    <input type="text"
+                           name="add_cb_not_pb_{{ forloop.counter }}_particulars"
+                           class="cb-input cb-input-particulars"
+                           value="{{ row.particulars }}"
+                           {% if row.particulars %}readonly{% endif %}>
+                  {% endif %}
+                </td>
+                <td class="cb-center">
+                  {{ row.voucher_no }}
+                </td>
+                <td class="cb-center">
+                  {{ row.cheque_no }}
+                </td>
+                <td class="cb-right">
+                  {{ row.amount_display }}
+                </td>
+              </tr>
+              {% endfor %}
+            {% endif %}
+
+            <tr class="brs-category-row">
+              <td></td>
+              <td><strong>Less: Amount Debited in Pass Book but not Credited in Cash Book</strong></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+
+            {% if less_pb_not_cb %}
+              {% for row in less_pb_not_cb %}
+              <tr>
+                <td class="cb-center">
+                  {{ row.date|date:"d-m-Y" }}
+                </td>
+                <td>
+                  {% if is_pdf %}
+                    {{ row.particulars }}
+                  {% else %}
+                    <input type="text"
+                           name="less_pb_not_cb_{{ forloop.counter }}_particulars"
+                           class="cb-input cb-input-particulars"
+                           value="{{ row.particulars }}"
+                           {% if row.particulars %}readonly{% endif %}>
+                  {% endif %}
+                </td>
+                <td class="cb-center">
+                  {{ row.voucher_no }}
+                </td>
+                <td class="cb-center">
+                  {{ row.cheque_no }}
+                </td>
+                <td class="cb-right">
+                  {{ row.amount_display }}
+                </td>
+              </tr>
+              {% endfor %}
+            {% endif %}
+
+            <tr class="brs-category-row">
+              <td></td>
+              <td><strong>Add: Amount Credited in Pass Book but not Debited in Cash Book</strong></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+
+            {% if add_pb_not_cb %}
+              {% for row in add_pb_not_cb %}
+              <tr>
+                <td class="cb-center">
+                  {{ row.date|date:"d-m-Y" }}
+                </td>
+                <td>
+                  {% if is_pdf %}
+                    {{ row.particulars }}
+                  {% else %}
+                    <input type="text"
+                           name="add_pb_not_cb_{{ forloop.counter }}_particulars"
+                           class="cb-input cb-input-particulars"
+                           value="{{ row.particulars }}"
+                           {% if row.particulars %}readonly{% endif %}>
+                  {% endif %}
+                </td>
+                <td class="cb-center">
+                  {{ row.voucher_no }}
+                </td>
+                <td class="cb-center">
+                  {{ row.cheque_no }}
+                </td>
+                <td class="cb-right">
+                  {{ row.amount_display }}
+                </td>
+              </tr>
+              {% endfor %}
+            {% endif %}
+
+            <tr>
+              <td class="cb-center">
+                {{ closing_passbook_date|date:"d-m-Y" }}
+              </td>
+              <td>
+                Closing Balance as per Pass Book as on {{ closing_passbook_date|date:"d-m-Y" }}
+              </td>
+              <td class="cb-center">—</td>
+              <td class="cb-center">—</td>
+              <td class="cb-right">
+                {{ closing_passbook_amount_display }}
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if not is_pdf %}
+  <div class="brs-footer-bar">
+    <button type="submit" class="cb-btn-primary">
+      Save
+    </button>
+  </div>
+  {% endif %}
+</form>
+{% endif %}
+
+{% if not is_pdf %}
+<style>
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.brs-page {
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  height:calc(80vh - 70px);
+}
+
+.brs-content-area {
+  flex:1 1 auto;
+  overflow-y:auto;
+  min-height:0;
+}
+
+.brs-box {
+  background: radial-gradient(circle at top left,#0b1220,#020617);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.9);
+  border: 1px solid #37371f;
+  border-radius: 4px;
+  padding: 6px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.brs-box-body.brs-scroll-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.brs-footer-bar {
+  position:sticky;
+  bottom:0;
+  padding:4px 0;
+  text-align:center;
+  background:#020617;
+  border-top:1px solid #1f2937;
+}
+
+.brs-box-header {
+  display:flex;
+  flex-direction:column;
+  font-size:11px;
+  color:#f9fafb;
+}
+.brs-box-header > span:firstchild {
+  font-weight:600;
+}
+.brs-box-subtitle {
+  font-size:10px;
+  color:#9ca3af;
+}
+
+.cb-table {
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+  font-size:11px;
+  color:#e5e7eb;
+}
+.cb-table th,
+.cb-table td {
+  border-top:1px solid #0266f1;
+  border-bottom:1px solid #0350f6;
+  padding:3px 4px;
+}
+.cb-table thead th {
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:linear-gradient(90deg,#0b1120,#1d4ed8);
+  font-weight:500;
+  font-size:11px;
+  color:#f9fafb;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+}
+
+.cb-col-date { width:40px; }
+.cb-col-particulars { width:700px; }
+.cb-col-voucher { width:50px; }
+.cb-col-cheque { width:40px; }
+.cb-col-amount { width:100px; }
+
+.cb-center { text-align:center; white-space:nowrap; }
+.cb-right  { text-align:right;  white-space:nowrap; }
+
+.cb-input-right { text-align:right; }
+
+.cb-input-particulars {
+  width:100%;
+  box-sizing:border-box;
+}
+
+.brs-category-row td {
+  background:#020b30;
+  font-size:11px;
+}
+
+.brs-top-filter-row {
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.brs-top-filter-item {
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:4px;
+}
+.brs-top-label {
+  font-size:11px;
+  color:#e5e7eb;
+}
+.brs-top-filter-actions {
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.cb-btn-secondary {
+  background:#111827;
+  color:#e5e7eb;
+  border:1px solid #4b5563;
+  border-radius:3px;
+  cursor:pointer;
+  font-size:11px;
+  padding:4px 8px;
+}
+.cb-btn-secondary:hover {
+  background:#1f2937;
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const editBtn = document.getElementById("brs-edit-btn");
+  if (!editBtn) return;
+
+  editBtn.addEventListener("click", function () {
+    const ok = confirm("Are you sure you want to change particulars?");
+    if (!ok) {
+      return;
+    }
+
+    const inputs = document.querySelectorAll('.cb-input-particulars');
+    inputs.forEach(function (inp) {
+      inp.removeAttribute('readonly');
+    });
+  });
+});
+</script>
+{% else %}
+<style>
+/* Hide app chrome and tabs in PDF */
+.header,
+.top-header,
+.site-header,
+.navbar,
+.navbar-default,
+.sidebar,
+.side-bar,
+.left-sidebar,
+.right-sidebar,
+.brs-tabs,
+.brs-tab-bar,
+.brs-tabs-bar,
+.brs-tab-row,
+.brs-tab-header,
+.tabs,
+.tab-buttons,
+ul.tabs,
+ul.nav,
+.brs_title_bar,
+.page-title,
+.brs-top-menu,
+.brs-nav {
+  display: none !important;
+}
+
+/* Hide any anchor pointing to accounts/brs URLs */
+a[href*="/accounts/brs/"] {
+  display: none !important;
+}
+
+/* Remove printed href texts if still appended */
+a:link:after,
+a:visited:after {
+  content: "" !important;
+}
+
+/* Base PDF typography: 12px for content; headings keep inline size/color */
+body {
+  font-family: DejaVu Sans, sans-serif;
+  font-size: 12px;
+  color: #000;
+  background: #fff;
+}
+
+/* Table & content text at 12px */
+.cb-table,
+.cb-table th,
+.cb-table td,
+.brs-page,
+.brs-content-area,
+.brs-box {
+  font-size: 12px;
+  color: #000;
+}
+
+/* Attractive table styling */
+.cb-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #111827;
+}
+.cb-table thead th {
+  background: #010e23;
+  font-weight: 700;
+  color: #ffffff;
+  border: 1px solid #003a9f;
+  padding: 5px 6px;
+}
+.cb-table td {
+  border: 1px solid #d1d5db;
+  padding: 4px 6px;
+}
+.cb-table tbody tr:nth-child(even) td {
+  background: #f9fafb;
+}
+.cb-table tbody tr:nth-child(odd) td {
+  background: #ffffff;
+}
+.brs-category-row td {
+  background: #e5e7eb;
+  font-weight: 600;
+}
+
+.cb-center { text-align:center; white-space:nowrap; }
+.cb-right  { text-align:right;  white-space:nowrap; }
+
+/* Light background for PDF content */
+.brs-box,
+.brs-content-area,
+.brs-page {
+  background: #ffffff;
+  box-shadow: none;
+  border: none;
+}
+</style>
+{% endif %}
+
+{% endblock %}

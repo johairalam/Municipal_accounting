@@ -1,0 +1,336 @@
+{% extends "accounts/base_brs.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block brs_title %}Show Bank Entry{% endblock %}
+
+{% block brs_content %}
+  <!-- Filter bar -->
+  <form method="get" class="cb-filter-bar" id="show-bank-entry-filter-form">
+    <div class="cb-filter-row">
+      <label>
+        Ledger:
+        <select name="ledger_id" id="ledger_id" class="cb-select cb-input" required>
+          <option value="">-- Select ledger (450...) --</option>
+          {% for ledger in ledgers %}
+            <option value="{{ ledger.id }}"
+                    {% if request.GET.ledger_id == ledger.id|stringformat:"s" %}selected{% endif %}>
+              {{ ledger.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>
+        From:
+        <input type="date"
+               name="from_date"
+               id="from_date"
+               class="cb-input"
+               value="{{ from_date|date:'Y-m-d' }}">
+      </label>
+
+      <label>
+        To:
+        <input type="date"
+               name="to_date"
+               id="to_date"
+               class="cb-input"
+               value="{{ to_date|date:'Y-m-d' }}">
+      </label>
+
+      <button type="submit" class="cb-btn-primary">Search</button>
+    </div>
+  </form>
+
+  <!-- Results table -->
+  {% if selected_ledger %}
+  <div class="cb-two-page-wrapper" style="display:block; padding:8px; margin-top:4px;">
+
+    <!-- Header + local filters for this ledger table -->
+    <div class="brs-box-header-row" style="margin-bottom:4px;">
+      <div class="brs-box-header">
+        <span>Bank Entry (Ledger)</span>
+        <span class="brs-box-subtitle">
+          Statement entries for selected ledger
+        </span>
+      </div>
+
+      <div class="brs-header-filters">
+        <label class="brs-header-filter-item">
+          Amount search:
+          <input type="text" id="ledger_amount_filter" class="cb-input" placeholder="Search amount">
+        </label>
+        <label class="brs-header-filter-item">
+          Cheque search:
+          <input type="text" id="ledger_cheque_filter" class="cb-input" placeholder="Search cheque no.">
+        </label>
+      </div>
+    </div>
+
+    <!-- Scrollable table wrapper -->
+    <div class="cb-table-wrapper ledger-scroll-wrapper">
+      <table class="cb-table" id="ledger-box" style="table-layout:fixed; width:100%; font-size:11px;">
+        <thead>
+          <tr>
+            <th class="cb-center cb-col-type">Type</th>
+            <th class="cb-center cb-col-date">Date</th>
+            <th class="cb-center cb-col-cheque">Cheque No</th>
+            <th class="cb-center cb-col-narration">Bank Narration</th>
+            <th class="cb-right cb-col-amount">Dr Amount</th>
+            <th class="cb-right cb-col-amount">Cr Amount</th>
+            <th class="cb-right cb-col-amount">Balance</th>
+            <th class="cb-center cb-col-action">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="6" style="text-align:right; font-weight:bold;">
+              Opening Balance ({{ from_date_display }})
+            </td>
+            <td class="cb-right" style="font-weight:bold;">
+              {% if opening_balance %}
+                {{ opening_balance|floatformat:2|intcomma }}
+              {% else %}
+                0.00
+              {% endif %}
+            </td>
+            <td></td>
+          </tr>
+
+          {% for row in entries %}
+          <tr class="ledger-row"
+              data-amount="{{ row.dr_amount|default_if_none:row.cr_amount }}"
+              data-cheque="{{ row.cheque_number|default_if_none:''|upper }}">
+            <td class="cb-center">{{ row.entry_type }}</td>
+            <td class="cb-center">{{ row.entry_date|date:"d-m-Y" }}</td>
+            <td class="cb-center">
+              {{ row.cheque_number|default:"-" }}
+            </td>
+            <!-- narration cell: 40% width + wrap -->
+            <td class="cb-narration-cell">
+              {{ row.bank_narration }}
+            </td>
+            <td class="cb-right">
+              {% if row.dr_amount %}
+                {{ row.dr_amount|floatformat:2|intcomma }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="cb-right">
+              {% if row.cr_amount %}
+                {{ row.cr_amount|floatformat:2|intcomma }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="cb-right">
+              {{ row.running_balance|floatformat:2|intcomma }}
+            </td>
+            <td class="cb-center">
+              {% if "BTN_ACCOUNTS_BRS_SHOW_BANK_ENTRY_EDIT" in allowed_codes %}
+                <a href="{% url 'accounts_bank_entry' %}?ledger_id={{ selected_ledger.id }}&brs_id={{ row.id }}">
+                  <button type="button" class="cb-btn-secondary">Edit</button>
+                </a>
+              {% endif %}
+
+              {% if "BTN_ACCOUNTS_BRS_SHOW_BANK_ENTRY_DELETE" in allowed_codes %}
+                <form method="post"
+                      action="{% url 'accounts_brs_show_bank_entry' %}"
+                      style="display:inline;">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="entry_id" value="{{ row.id }}">
+                  <input type="hidden" name="ledger_id" value="{{ selected_ledger.id }}">
+                  <input type="hidden" name="from_date" value="{{ from_date|date:'Y-m-d' }}">
+                  <input type="hidden" name="to_date" value="{{ to_date|date:'Y-m-d' }}">
+                  <button type="submit"
+                          class="cb-btn-secondary"
+                          onclick="return confirm('Delete this entry?');">
+                    Delete
+                  </button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="cb-center">No entries for this period.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <style>
+    /* same visual style as other BRS tables */
+    .cb-table th,
+    .cb-table td {
+      border-top: 1px solid #0266f1;
+      border-bottom: 1px solid #0350f6;
+      padding: 3px 4px;
+    }
+
+    .cb-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: linear-gradient(90deg,#0b1120,#1d4ed8);
+      font-weight: 500;
+      font-size: 11px;
+      color: #f9fafb;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .cb-center {
+      text-align: center;
+      white-space: nowrap;
+    }
+    .cb-right {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    /* percentage widths: narration ~40%, others auto-fit within remaining 60% */
+    .cb-col-type      { width: 4%; }
+    .cb-col-date      { width: 8%; }
+    .cb-col-cheque    { width: 10%; }
+    .cb-col-narration { width: 40%; }
+    .cb-col-amount    { width: 10%; }
+    .cb-col-action    { width: 10%; }
+
+    /* narration cell wraps within its column */
+    .cb-narration-cell {
+      white-space: normal !important;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+
+    /* header + filters like BRS Adjustment */
+    .brs-box-header-row {
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      align-items:flex-end;
+      margin-top:-2px;
+    }
+    .brs-box-header {
+      display:flex;
+      flex-direction:column;
+      font-size:11px;
+      color:#f9fafb;
+    }
+    .brs-box-header > span:first-child {
+      font-weight:600;
+    }
+    .brs-box-subtitle {
+      font-size:10px;
+      color:#9ca3af;
+    }
+    .brs-header-filters {
+      display:flex;
+      gap:10px;
+      align-items:flex-end;
+      font-size:10px;
+    }
+    .brs-header-filter-item {
+      display:flex;
+      flex-direction:column;
+      font-size:10px;
+    }
+
+    /* vertical scroll for this page's table area */
+    .ledger-scroll-wrapper {
+      max-height: 60vh;      /* adjust if needed */
+      overflow-y: auto;
+    }
+  </style>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const fromEl = document.getElementById('from_date');
+    const toEl = document.getElementById('to_date');
+
+    function toISO(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    const today = new Date();
+    let fyStartYear = today.getFullYear();
+    if (today.getMonth() < 3) { // Jan=0, Feb=1, Mar=2
+      fyStartYear = fyStartYear - 1;
+    }
+    const fyStart = new Date(fyStartYear, 3, 1); // 1 April
+
+    if (fromEl && !fromEl.value) {
+      fromEl.value = toISO(fyStart);
+    }
+    if (toEl && !toEl.value) {
+      toEl.value = toISO(today);
+    }
+
+    // amount & cheque filters (same logic as BRS Adjustment)
+    const ledgerTable = document.getElementById('ledger-box');
+    const amountInput = document.getElementById('ledger_amount_filter');
+    const chequeInput = document.getElementById('ledger_cheque_filter');
+
+    if (!ledgerTable) return;
+
+    function parseAmount(row) {
+      const val = row.getAttribute('data-amount');
+      if (!val) return 0;
+      const num = Number(val.toString().replace(/,/g, ''));
+      return isNaN(num) ? 0 : num;
+    }
+
+    function filterByAmount() {
+      const query = (amountInput.value || '').replace(/,/g, '').trim();
+      const rows = ledgerTable.querySelectorAll('tbody tr.ledger-row');
+      if (!query) {
+        rows.forEach(r => r.style.display = '');
+        return;
+      }
+      rows.forEach(row => {
+        const amt = parseAmount(row);
+        const amtText = Number(amt).toFixed(2).replace(/,/g, '');
+        if (amtText.indexOf(query) !== -1) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    function filterByCheque() {
+      const query = (chequeInput.value || '').toUpperCase().trim();
+      const rows = ledgerTable.querySelectorAll('tbody tr.ledger-row');
+      if (!query) {
+        rows.forEach(r => r.style.display = '');
+        return;
+      }
+      rows.forEach(row => {
+        const chq = (row.getAttribute('data-cheque') || '').toUpperCase();
+        if (chq.indexOf(query) !== -1) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    if (amountInput) {
+      amountInput.addEventListener('input', filterByAmount);
+    }
+    if (chequeInput) {
+      chequeInput.addEventListener('input', filterByCheque);
+    }
+  });
+  </script>
+{% endblock %}

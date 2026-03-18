@@ -1,0 +1,720 @@
+{% extends "accounts/base_accounts_dashboard.html" %}
+{% load static %}
+
+
+{% block accounts_content %}
+<div class="cb-page">
+  <!-- Title -->
+  <h2 id="cashbook-title"
+      style="text-align:center; font-weight:bold; margin-top:-20px; color:#fae050; margin-bottom:6px;">
+    Main Cash Book
+  </h2>
+
+  <form id="cashbook-filter-form" method="get" class="cb-filter-bar">
+
+    <!-- Row 1: Ledger searchable dropdown + View button -->
+    <div class="cb-filter-row cb-ledger-row">
+      <label class="cb-ledger-label">
+        Ledger (450*):
+        <div class="cb-ledger-select-wrapper" id="ledger-select-wrapper">
+          <input type="text"
+                 id="ledger-search"
+                 class="cb-ledger-search-input"
+                 placeholder="Type to search ledger">
+          <!-- hidden value actually posted -->
+          <input type="hidden"
+                 name="ledger_id"
+                 id="ledger-id-hidden"
+                 value="{{ request.GET.ledger_id|default_if_none:'' }}">
+
+          <!-- dropdown list -->
+          <div class="cb-ledger-dropdown" id="ledger-dropdown">
+            <div class="cb-ledger-option {% if not request.GET.ledger_id %}cb-ledger-option-selected{% endif %}"
+                 data-ledger-id="">
+              All
+            </div>
+            {% for l in cash_ledgers %}
+              <div class="cb-ledger-option
+                          {% if request.GET.ledger_id|stringformat:"s" == l.id|stringformat:"s" %}
+                            cb-ledger-option-selected
+                          {% endif %}"
+                   data-ledger-id="{{ l.id }}">
+                {{ l.name }}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </label>
+
+      <button type="submit" class="cb-btn-primary cb-ledger-view-btn">View</button>
+    </div>
+
+    <!-- Row 2: Date, voucher, amount, cheque, search / reset / export -->
+    <div class="cb-filter-row cb-filter-row-2">
+      <label>
+        From:
+        <input type="date"
+               name="from_date"
+               id="from_date"
+               value="{{ from_date|date:'Y-m-d' }}">
+      </label>
+
+      <label>
+        To:
+        <input type="date"
+               name="to_date"
+               id="to_date"
+               value="{{ to_date|date:'Y-m-d' }}">
+      </label>
+
+      <label>
+        Voucher no.:
+        <input type="text"
+               name="voucher_no"
+               value="{{ request.GET.voucher_no|default_if_none:'' }}"
+               placeholder="Voucher number">
+      </label>
+
+      <label>
+        Amount:
+        <input type="text"
+               name="amount"
+               value="{{ request.GET.amount|default_if_none:'' }}"
+               placeholder="Amount">
+      </label>
+
+      <label>
+        Cheque no.:
+        <input type="text"
+               name="cheque_no"
+               value="{{ request.GET.cheque_no|default_if_none:'' }}"
+               placeholder="Cheque number">
+      </label>
+
+      <button type="submit" class="cb-btn-primary">Search</button>
+      <a href="{% url 'accounts_cash_book' %}" class="cb-filter-reset">Reset</a>
+      <!-- Export to Excel button (uses same view with ?export=excel) -->
+      <button type="submit"
+              name="export"
+              value="excel"
+              class="cb-btn-primary">
+        Export to Excel
+      </button>
+    </div>
+
+  </form>
+
+  <!-- Two-page layout: scrollable body, fixed footers -->
+  <div class="cb-two-page-wrapper">
+    <!-- Left page: Receipts -->
+    <div class="cb-page-left">
+      <div class="cb-page-header">Receipts</div>
+
+      <div class="cb-table-wrapper">
+        <table class="cb-table cb-table-left">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Voucher no.</th>
+              <th>Cheque no.</th>
+              <th class="cb-col-main">Particulars</th>
+              <th>L/F</th>
+              <th>Details</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Opening balance row -->
+            <tr class="cb-opening-row">
+              <td class="cb-center">{{ opening_from_date|date:"d-m-Y" }}</td>
+              <td class="cb-center"></td>
+              <td class="cb-center"></td>
+              <td>Opening balance</td>
+              <td class="cb-center">{{ opening_side }}</td>
+              <td class="cb-center"></td>
+              <td class="cb-num cb-amount-cell" data-raw-amount="{{ opening_amount_abs }}">
+                {{ opening_amount_abs }}
+              </td>
+            </tr>
+
+            <!-- Receipts + contra entries (left side) -->
+            {% for r in receipts_entries %}
+            <!-- main row -->
+            <tr class="cb-narration-row-prev">
+              <td class="cb-center">{{ r.date|date:"d-m-Y" }}</td>
+              <td class="cb-center">{{ r.voucher_no }}</td>
+              <td class="cb-center">{{ r.cheque_no }}</td>
+
+              <!-- All ledger lines -->
+              <td>
+                {% for line in r.lines %}
+                  <div class="cb-particular">{{ line }}</div>
+                {% endfor %}
+              </td>
+
+              <!-- L/F: Dr/Cr per ledger line -->
+              <td class="cb-center">
+                {% for lf in r.lf_lines %}
+                  <div class="cb-particular">{{ lf.1 }}</div>
+                {% endfor %}
+              </td>
+
+              <!-- Details = amounts (includes contra cash amount) -->
+              <td class="cb-details-cell">
+                {% for d in r.details %}
+                  <div class="cb-particular cb-num" data-raw-amount="{{ d }}">{{ d }}</div>
+                {% endfor %}
+              </td>
+
+              <!-- Amount total -->
+              <td class="cb-num cb-amount-cell" data-raw-amount="{{ r.amount }}">
+                {{ r.amount }}
+              </td>
+            </tr>
+            <!-- narration row: text in Receipts column -->
+            <tr class="cb-narration-row">
+              <td></td>
+              <td></td>
+              <td></td>
+              <td class="cb-narration-cell">
+                Narration: {{ r.narration }}
+              </td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="cb-empty">
+                No receipts for the selected criteria.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Fixed footer (left) -->
+      <div class="cb-footer">
+        <table class="cb-table cb-footer-table">
+          <tfoot>
+            <tr>
+              <td colspan="6" class="cb-footer-label">Total receipts</td>
+              <td class="cb-num cb-amount-cell" data-raw-amount="{{ total_receipts }}">
+                {{ total_receipts }}
+              </td>
+            </tr>
+            <tr class="cb-footer-blank-row">
+              <td colspan="7">&nbsp;</td>
+            </tr>
+            <tr class="cb-footer-line-row">
+              <td colspan="6" class="cb-footer-label">Grand total</td>
+              <td class="cb-num cb-amount-cell" data-raw-amount="{{ grand_total_left }}">
+                {{ grand_total_left }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right page: Payments -->
+    <div class="cb-page-right">
+      <div class="cb-page-header">Payments</div>
+
+      <div class="cb-table-wrapper">
+        <table class="cb-table cb-table-right">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Voucher no.</th>
+              <th>Cheque no.</th>
+              <th class="cb-col-main">Particulars</th>
+              <th>L/F</th>
+              <th>Details</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Payment + contra entries (right side) -->
+            {% for p in payments_entries %}
+            <!-- main row -->
+            <tr class="cb-narration-row-prev">
+              <td class="cb-center">{{ p.date|date:"d-m-Y" }}</td>
+              <td class="cb-center">{{ p.voucher_no }}</td>
+              <td class="cb-center">{{ p.cheque_no }}</td>
+
+              <!-- All ledger lines -->
+              <td>
+                {% for line in p.lines %}
+                  <div class="cb-particular">{{ line }}</div>
+                {% endfor %}
+              </td>
+
+              <!-- L/F: Dr/Cr per ledger line -->
+              <td class="cb-center">
+                {% for lf in p.lf_lines %}
+                  <div class="cb-particular">{{ lf.1 }}</div>
+                {% endfor %}
+              </td>
+
+              <!-- Details = amounts (includes contra cash amount) -->
+              <td class="cb-details-cell">
+                {% for d in p.details %}
+                  <div class="cb-particular cb-num" data-raw-amount="{{ d }}">{{ d }}</div>
+                {% endfor %}
+              </td>
+
+              <!-- Amount total -->
+              <td class="cb-num cb-amount-cell" data-raw-amount="{{ p.amount }}">
+                {{ p.amount }}
+              </td>
+            </tr>
+            <!-- narration row: text in Payments column -->
+            <tr class="cb-narration-row">
+              <td></td>
+              <td></td>
+              <td></td>
+              <td class="cb-narration-cell">
+                Narration: {{ p.narration }}
+              </td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="cb-empty">
+                No payments for the selected criteria.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Fixed footer (right) -->
+      <div class="cb-footer">
+        <table class="cb-table cb-footer-table">
+          <tfoot>
+            <tr>
+              <td colspan="6" class="cb-footer-label">Total payments</td>
+              <td class="cb-num cb-amount-cell" data-raw-amount="{{ total_payments }}">
+                {{ total_payments }}
+              </td>
+            </tr>
+            <tr class="cb-footer-line-row">
+              <td colspan="6" class="cb-footer-label">Closing balance</td>
+              <td class="cb-num cb-amount-cell" data-raw-amount="{{ closing_balance }}">
+                {{ closing_balance }}
+              </td>
+            </tr>
+            <tr>
+              <td colspan="6" class="cb-footer-label">Grand total</td>
+              <td class="cb-num cb-amount-cell" data-raw-amount="{{ grand_total_right }}">
+                {{ grand_total_right }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+/* 4th column minimum width (only tweak this) */
+:root {
+  --cb-main-col-width: 218px;
+}
+
+.cb-page {
+  display:flex;
+  flex-direction:column;
+  height:calc(92vh - 60px);
+  padding:8px 16px 8px 16px;
+  box-sizing:border-box;
+  margin-left:-30px;
+  margin-right:-20px;
+}
+
+/* Filter bar */
+.cb-filter-bar {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:6px;
+  font-size:11px;
+  color:#e5e7eb;
+}
+
+.cb-filter-row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+
+.cb-ledger-row {
+  align-items:flex-start;
+}
+
+.cb-filter-row-2 {
+  justify-content:flex-start;
+}
+
+.cb-filter-bar label {
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+
+.cb-filter-bar input[type="date"],
+.cb-filter-bar input[type="text"] {
+  padding:3px 6px;
+  border:1px solid #4b5563;
+  border-radius:4px;
+  font-size:11px;
+  background-color:#020617;
+  color:#e5e7eb;
+  white-space:nowrap;
+}
+
+.cb-btn-primary {
+  padding:4px 10px;
+  font-size:11px;
+  border-radius:4px;
+  border:1px solid #288cfa;
+  background:linear-gradient(90deg,#288cfa,#22c55e);
+  color:#020617;
+  cursor:pointer;
+  box-shadow:0 0 10px rgba(40,140,250,0.6);
+}
+
+.cb-ledger-view-btn {
+  margin-left:4px;
+}
+
+.cb-filter-reset {
+  padding:4px 10px;
+  font-size:11px;
+  border-radius:4px;
+  border:1px solid #4b5563;
+  color:#e5e7eb;
+  text-decoration:none;
+}
+
+.cb-ledger-label {
+  font-weight:600;
+  font-size:11px;
+}
+
+/* Ledger searchable dropdown */
+.cb-ledger-select-wrapper {
+  position:relative;
+  min-width:260px;
+}
+
+.cb-ledger-search-input {
+  width:100%;
+  padding:3px 6px;
+  border:1px solid #4b5563;
+  border-radius:4px;
+  font-size:11px;
+  background-color:#020617;
+  color:#e5e7eb;
+}
+
+.cb-ledger-dropdown {
+  position:absolute;
+  left:0;
+  right:0;
+  max-height:180px;
+  overflow-y:auto;
+  border:1px solid #4b5563;
+  border-top:none;
+  background:#020617;
+  z-index:50;
+  display:none;
+}
+
+.cb-ledger-option {
+  padding:3px 6px;
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+.cb-ledger-option:hover {
+  background:#e01b09;
+}
+
+.cb-ledger-option-selected {
+  background:#1d4ed8;
+  color:#f9fafb;
+}
+
+/* Two-page layout */
+.cb-two-page-wrapper {
+  flex:1 1 auto;
+  min-height:0;
+  display:flex;
+  gap:12px;
+  background:radial-gradient(circle at top left,#0b1220,#020617);
+  box-shadow:0 18px 40px rgba(0,0,0,0.9);
+  border:1px solid #37371f;
+  padding:8px;
+}
+
+.cb-page-left,
+.cb-page-right {
+  flex:1 1 0;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+}
+
+.cb-page-header {
+  text-align:center;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:#f9fafb;
+  padding:3px 0;
+  border-bottom:1px solid #4b5563;
+}
+
+/* Scrollable body, fixed footer */
+.cb-table-wrapper {
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+}
+
+/* footer remains non-sticky */
+.cb-footer {
+  flex:0 0 auto;
+}
+
+/* Tables */
+.cb-table {
+  width:100%;
+  border-collapse:collapse;
+  table-layout:auto;
+  font-size:9px;
+  color:#e5e7eb;
+}
+
+/* global cells */
+.cb-table th,
+.cb-table td {
+  border-top:1px solid #0266f1;
+  border-bottom:1px solid #0350f6;
+  padding:3px 4px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Freeze row 1 (Date…Amount) on both Receipts and Payments */
+.cb-table-left thead th,
+.cb-table-right thead th {
+  background:linear-gradient(90deg,#0b1120,#1d4ed8);
+  font-weight:500;
+  font-size:9px;
+  color:#f9fafb;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  text-align:center;
+  position:sticky;
+  top:0;
+  z-index:5;
+}
+
+/* 4th column: Receipts / Payments minimum width */
+.cb-table-left th:nth-child(4),
+.cb-table-right th:nth-child(4),
+.cb-table-left td:nth-child(4),
+.cb-table-right td:nth-child(4) {
+  min-width:var(--cb-main-col-width);
+}
+
+/* allow wrapping inside 4th column so narration breaks lines */
+.cb-table-left td:nth-child(4),
+.cb-table-right td:nth-child(4) {
+  white-space:normal;
+  overflow:visible;
+  text-overflow:clip;
+}
+
+/* Narration group: hide border above narration and merge with main row */
+.cb-narration-row-prev td {
+  border-bottom:none;
+}
+
+.cb-narration-row td {
+  border-top:none;
+  border-bottom:none;
+}
+
+/* Narration styling: justified, yellow text, wrapped */
+.cb-narration-cell {
+  font-size:9px;
+  padding-left:8px;
+  color:#fbbf24;
+  text-align:justify;
+  white-space:normal;
+  word-wrap:break-word;
+  word-break:break-word;
+}
+
+/* Footer tables */
+.cb-footer-table td {
+  border-top:1px solid #4b5563;
+  border-bottom:1px solid #4b5563;
+  text-align:right;
+}
+
+.cb-footer-blank-row td {
+  border-top:none;
+  border-bottom:none;
+}
+
+/* Single grid line after blank */
+.cb-footer-line-row td {
+  border-top:1px solid #4b5563;
+}
+
+.cb-center {
+  text-align:center;
+}
+
+.cb-particular {
+  line-height:1.25;
+}
+
+/* Details column: top + left */
+.cb-details-cell {
+  vertical-align:top;
+  text-align:left;
+  color:#e5e7eb;
+}
+
+/* Amount column: bottom + right, yellow */
+.cb-num {
+  text-align:right;
+  white-space:nowrap;
+  color:#fbbf24;
+}
+
+.cb-amount-cell {
+  vertical-align:bottom;
+}
+
+.cb-empty {
+  text-align:center;
+  color:#9ca3af;
+}
+
+.cb-opening-row td {
+  font-weight:600;
+}
+
+.cb-footer-label {
+  text-align:right;
+  font-weight:600;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Indian number format
+  function formatIndian(num) {
+    if (num === null || num === undefined || num === "") return "";
+    const n = Number(num);
+    if (isNaN(n)) return "";
+    return n.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  document.querySelectorAll('.cb-num[data-raw-amount]').forEach(function (cell) {
+    const raw = cell.getAttribute('data-raw-amount');
+    if (!raw) return;
+    const n = Number(raw);
+    if (isNaN(n)) return;
+    cell.textContent = formatIndian(n);
+  });
+
+  // Searchable ledger dropdown
+  const wrapper     = document.getElementById('ledger-select-wrapper');
+  const searchInput = document.getElementById('ledger-search');
+  const dropdown    = document.getElementById('ledger-dropdown');
+  const hiddenInput = document.getElementById('ledger-id-hidden');
+
+  function openDropdown() {
+    if (dropdown) dropdown.style.display = 'block';
+  }
+  function closeDropdown() {
+    if (dropdown) dropdown.style.display = 'none';
+  }
+
+  if (searchInput && dropdown && hiddenInput) {
+    // pre-fill text based on selected option on load
+    const selectedOpt = dropdown.querySelector('.cb-ledger-option-selected');
+    if (selectedOpt) {
+      searchInput.value = selectedOpt.textContent.trim();
+    }
+
+    searchInput.addEventListener('focus', openDropdown);
+    searchInput.addEventListener('click', openDropdown);
+
+    // Filter options as user types
+    searchInput.addEventListener('input', function () {
+      const q = this.value.trim().toLowerCase();
+      const opts = dropdown.querySelectorAll('.cb-ledger-option');
+      opts.forEach(function (opt) {
+        const text = opt.textContent.toLowerCase();
+        opt.style.display = !q || text.includes(q) ? '' : 'none';
+      });
+      openDropdown();
+    });
+
+    // Click to select
+    dropdown.addEventListener('click', function (e) {
+      const opt = e.target.closest('.cb-ledger-option');
+      if (!opt) return;
+
+      dropdown.querySelectorAll('.cb-ledger-option-selected')
+        .forEach(function (el) { el.classList.remove('cb-ledger-option-selected'); });
+
+      opt.classList.add('cb-ledger-option-selected');
+
+      const id   = opt.getAttribute('data-ledger-id') || '';
+      const text = opt.textContent.trim();
+
+      hiddenInput.value = id;
+      searchInput.value = text;
+      closeDropdown();
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function (e) {
+      if (!wrapper.contains(e.target)) {
+        closeDropdown();
+      }
+    });
+  }
+
+  // Change title: Main / Subsidiary based on hidden ledger id
+  const titleEl = document.getElementById('cashbook-title');
+  function updateTitle() {
+    if (!titleEl || !hiddenInput) return;
+    const val = hiddenInput.value;
+    titleEl.textContent = val ? "Subsidiary Cash Book" : "Main Cash Book";
+  }
+  updateTitle();
+});
+</script>
+{% endblock %}
