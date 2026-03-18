@@ -1,0 +1,426 @@
+{% extends "accounts/base_accounts_dashboard.html" %}
+{% load static %}
+
+{% block accounts_content %}
+<div class="ie-page">
+  <h2 style="text-align:center; font-weight:bold; margin-top: -20px; color: #fae050; margin-bottom:6px;">
+    Income &amp; Expenditure
+  </h2>
+
+  <!-- Filter & Export Bar -->
+  <form id="ie-filter-form" method="get" class="ie-filter-bar">
+    <label>
+      From:
+      <input type="date" name="from_date" value="{{ from_date|date:'Y-m-d' }}">
+    </label>
+    <label>
+      To:
+      <input type="date" name="to_date" value="{{ to_date|date:'Y-m-d' }}">
+    </label>
+    <button type="submit">Filter</button>
+
+    <button type="submit"
+        name="export"
+        value="excel"
+        formaction="{% url 'income_expenditure_export_excel' %}">
+  Export to Excel
+</button>
+
+  </form>
+
+  <!-- Two tables side by side -->
+  <div class="ie-two-panels">
+    <!-- Left: Expenditure -->
+    <div class="ie-panel">
+      <div class="ie-table-wrapper">
+        <table id="ie-expense-table" class="ie-table">
+          <thead>
+            <tr>
+              <th style="width:80%;">Expenditure</th>
+              <th style="width:20%;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for root in expense_roots %}
+              {% include "accounts/ie_node_row.html" with node=root side="expense" level=0 %}
+            {% empty %}
+            <tr>
+              <td colspan="2" style="text-align:center;">No expenditure in this period.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            {% if surplus > 0 %}
+            <tr id="ie-expense-diff-row">
+              <th>Excess of income over Expenditure</th>
+              <th class="ie-num" data-raw-amount="{{ surplus_abs }}">
+                {{ surplus_abs }}
+              </th>
+            </tr>
+            {% endif %}
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right: Income -->
+    <div class="ie-panel">
+      <div class="ie-table-wrapper">
+        <table id="ie-income-table" class="ie-table">
+          <thead>
+            <tr>
+              <th style="width:80%;">Income</th>
+              <th style="width:20%;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for root in income_roots %}
+              {% include "accounts/ie_node_row.html" with node=root side="income" level=0 %}
+            {% empty %}
+            <tr>
+              <td colspan="2" style="text-align:center;">No income in this period.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            {% if deficit > 0 %}
+            <tr id="ie-income-diff-row">
+              <th>Excess of expenditure over Income</th>
+              <th class="ie-num" data-raw-amount="{{ surplus_abs }}">
+                {{ surplus_abs }}
+              </th>
+            </tr>
+            {% endif %}
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fixed bottom totals bar inside content -->
+  <div class="ie-fixed-footer">
+    <div class="ie-fixed-footer-column">
+      <div class="ie-footer-line">
+        <span>Total Expenditure</span>
+        <span class="ie-num ie-footer-num" data-raw-amount="{{ total_expense }}">{{ total_expense }}</span>
+      </div>
+    </div>
+    <div class="ie-fixed-footer-column">
+      <div class="ie-footer-line">
+        <span>Total Income</span>
+        <span class="ie-num ie-footer-num" data-raw-amount="{{ total_income }}">{{ total_income }}</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<style>
+.ie-page {
+  padding: 8px 0 0 0;
+  height: 100%;
+}
+
+/* Filter bar (same as TB) */
+.ie-filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+
+.ie-filter-bar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ie-filter-bar input[type="date"] {
+  padding: 4px 8px;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  font-size: 12px;
+  background-color: #020617;
+  color: #e5e7eb;
+}
+
+.ie-filter-bar button {
+  padding: 5px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid #288cfa;
+  background: linear-gradient(90deg, #288cfa, #22c55e);
+  color: #020617;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(40,140,250,0.6);
+}
+
+.ie-filter-bar button:hover {
+  filter: brightness(1.05);
+}
+
+/* Layout for two panels */
+.ie-two-panels {
+  display: flex;
+  gap: 0;
+  height: calc(100vh - 170px);
+}
+
+.ie-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Table wrapper (TB style) */
+.ie-table-wrapper {
+  position: relative;
+  flex: 1;
+  overflow: auto;
+  border-radius: 0px;
+  background: radial-gradient(circle at top left, #0b1220, #020617);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.9);
+  border: 1px solid #1f2937;
+}
+
+/* Table (same as TB: no vertical gaps, just borders) */
+.ie-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+
+.ie-table th,
+.ie-table td {
+  border: 1px solid #f9cf01;
+  padding: 7px 9px;
+}
+
+/* Header */
+.ie-table thead th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(90deg, #0b1120, #1d4ed8);
+  z-index: 2;
+  font-weight: 600;
+  color: #f9fafb;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+}
+
+/* Diff rows styled like TB footer line */
+.ie-table tfoot tr {
+  position: sticky;
+  bottom: 0;
+  background: #020617;
+  font-weight: 700;
+  z-index: 1;
+  color: #fcc602;
+  letter-spacing: 0.10em;
+}
+
+/* Base rows */
+.ie-table tbody tr {
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+/* Hover row color */
+.ie-table tbody tr:hover {
+  background-color: rgba(59,130,246,0.35);
+  box-shadow: 0 0 8px rgba(59,130,246,0.7);
+  transform: translateY(-1px);
+}
+
+/* Particulars cell: indentation via margin-left on inline style, exactly like TB */
+.ie-particular {
+  display: flex;
+  align-items: center;
+}
+
+/* Toggle button (same as TB) */
+.tb-toggle-btn {
+  border: none;
+  background: #1d4ed8;
+  cursor: pointer;
+  margin-right: 6px;
+  font-size: 11px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #e5e7eb;
+}
+
+.tb-toggle-btn[aria-expanded="false"]::before {
+  content: "▶";
+}
+
+.tb-toggle-btn[aria-expanded="true"]::before {
+  content: "▼";
+}
+
+/* Hide children when collapsed */
+.ie-row-hidden {
+  display: none;
+}
+
+/* Numbers */
+.ie-num {
+  text-align: right;
+  white-space: nowrap;
+  color: #e5e7eb;
+}
+
+/* Fixed footer for totals: bold yellow text and Indian digits */
+.ie-fixed-footer {
+  position: fixed;
+  left: 281px;  /* match your sidebar/content start */
+  right: 20px;
+  bottom: 0;
+  height: 50px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 16px;
+  background: #020617;
+  border-top: 1px solid #1f2937;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.8);
+  z-index: 50;
+}
+
+.ie-fixed-footer-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ie-footer-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 700;
+  margin-left: 150px;
+  text-align: center;
+  color: #fcc602;  /* bold yellow like TB footer */
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Indian format (same idea as TB) [web:1063][web:1079]
+  function formatIndian(num) {
+    if (num === null || num === undefined || num === "") return "";
+    const n = Number(num);
+    if (isNaN(n)) return "";
+    return n.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  // Level colors (same palette as TB header/body)
+  const HEAD_BG   = 'linear-gradient(90deg, #0b1120, #1d4ed8)';
+  const MAIN_BG   = 'linear-gradient(90deg, #022c22, #0f766e)';
+  const SUB_BG    = 'linear-gradient(90deg, #312e81, #4c1d95)';
+  const GROUP_BG  = 'linear-gradient(90deg, #1f2937, #374151)';
+  const LEDGER_BG = 'linear-gradient(90deg, #020617, #111827)';
+
+  function colorRowsByDepth(table) {
+    const bodyRows = table.querySelectorAll('tbody tr');
+    bodyRows.forEach(function (row) {
+      const partic = row.querySelector('.ie-particular');
+      if (!partic) return;
+
+      const styleAttr = partic.getAttribute('style') || '';
+      let depth = 0;
+      const match = styleAttr.match(/margin-left:\s*([0-9.]+)em/);
+      if (match) depth = parseFloat(match[1]);
+
+      if (depth < 0.5) {
+        row.style.background = HEAD_BG;
+        row.style.fontWeight = '700';
+      } else if (depth >= 0.5 && depth < 1.5) {
+        row.style.background = MAIN_BG;
+      } else if (depth >= 1.5 && depth < 2.5) {
+        row.style.background = SUB_BG;
+      } else if (depth >= 2.5 && depth < 3.5) {
+        row.style.background = GROUP_BG;
+      } else if (depth >= 3.5) {
+        row.style.background = LEDGER_BG;
+      }
+    });
+  }
+
+  function formatTableNums(table) {
+    const numCells = table.querySelectorAll('.ie-num');
+    numCells.forEach(function (cell) {
+      const raw = cell.getAttribute('data-raw-amount');
+      if (raw === null || raw === "") {
+        cell.textContent = "";
+        return;
+      }
+      const n = Number(raw);
+      if (isNaN(n)) return;
+      cell.textContent = formatIndian(n);
+    });
+  }
+
+  function initIeTable(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    colorRowsByDepth(table);
+    formatTableNums(table);
+
+    function toggleChildren(parentId, show) {
+      const rows = table.querySelectorAll('tr[data-parent-id="' + parentId + '"]');
+      rows.forEach(function (row) {
+        if (show) {
+          row.classList.remove('ie-row-hidden');
+        } else {
+          row.classList.add('ie-row-hidden');
+        }
+        const childId = row.dataset.rowId;
+        if (!show) {
+          toggleChildren(childId, false);
+          const btn = row.querySelector('.tb-toggle-btn');
+          if (btn) btn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    table.addEventListener('click', function (e) {
+      const btn = e.target.closest('.tb-toggle-btn');
+      if (!btn) return;
+
+      const rowId = btn.dataset.rowId;
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      toggleChildren(rowId, !expanded);
+    });
+  }
+
+  initIeTable('ie-expense-table');
+  initIeTable('ie-income-table');
+
+  // Footer totals: Indian digits + bold yellow
+  document.querySelectorAll('.ie-footer-num').forEach(function (cell) {
+    const raw = cell.getAttribute('data-raw-amount');
+    if (raw === null || raw === "") {
+      cell.textContent = "";
+      return;
+    }
+    const n = Number(raw);
+    if (isNaN(n)) return;
+    cell.textContent = formatIndian(n);
+  });
+});
+</script>
+{% endblock %}

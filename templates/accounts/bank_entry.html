@@ -1,0 +1,320 @@
+{% extends "accounts/base_brs.html" %}
+{% load static %}
+
+{% block brs_title %}Bank Entry{% endblock %}
+
+{% block brs_content %}
+  <!-- Ledger selection -->
+  <form method="get" class="cb-filter-bar">
+    <div class="cb-filter-row">
+      <label>
+        Ledger:
+        <select name="ledger_id" id="ledger_id" class="cb-select cb-input" required>
+          <option value="">-- Select ledger (450...) --</option>
+          {% for ledger in ledgers %}
+            <option value="{{ ledger.id }}"
+                    {% if request.GET.ledger_id == ledger.id|stringformat:"s" %}selected{% endif %}>
+              {{ ledger.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <button type="submit" class="cb-btn-primary">Search</button>
+    </div>
+  </form>
+
+  <!-- Bank entry section only after ledger selected -->
+  {% if selected_ledger %}
+  <form method="post" id="brs-entry-form">
+    {% csrf_token %}
+    <input type="hidden" name="ledger_id" value="{{ selected_ledger.id }}">
+    {% if editing_entry %}
+      <input type="hidden" name="brs_id" value="{{ editing_entry.id }}">
+    {% endif %}
+
+    <!-- Table with input row(s) -->
+    <div class="cb-two-page-wrapper" style="display:block; padding:8px; margin-top:4px;">
+      <div class="cb-table-wrapper">
+        <table class="cb-table" id="brs-table" style="table-layout:auto; width:100%;">
+          <thead>
+            <tr>
+              <th class="cb-center" style="width:20px;">Type</th>
+              <th class="cb-center" style="width:140px;">Date</th>
+              <th class="cb-center" style="width:120px;">CHEQUE NUMBER</th>
+              <th class="cb-center">Bank Narration</th>
+              <th class="cb-right" style="width:120px;">Dr Amount</th>
+              <th class="cb-right" style="width:120px;">Cr Amount</th>
+            </tr>
+          </thead>
+          <tbody id="brs-tbody">
+            <!-- first row -->
+            <tr>
+              <td class="cb-center">
+                {% if editing_entry %}
+                  <select name="entry_type" class="cb-select brs-type cb-input" required>
+                    <option value="Dr" {% if editing_entry.entry_type == 'Dr' %}selected{% endif %}>Dr</option>
+                    <option value="Cr" {% if editing_entry.entry_type == 'Cr' %}selected{% endif %}>Cr</option>
+                  </select>
+                {% else %}
+                  <select name="rows[0][entry_type]" class="cb-select brs-type cb-input" required>
+                    <option value="Dr">Dr</option>
+                    <option value="Cr">Cr</option>
+                  </select>
+                {% endif %}
+              </td>
+              <td class="cb-center">
+                <input
+                  type="date"
+                  {% if editing_entry %}
+                    name="entry_date"
+                    value="{{ editing_entry.entry_date|date:'Y-m-d' }}"
+                  {% else %}
+                    name="rows[0][entry_date]"
+                  {% endif %}
+                  class="brs-date cb-input"
+                  required>
+              </td>
+              <td class="cb-center">
+                <input type="text"
+                       {% if editing_entry %}
+                         name="cheque_number"
+                         value="{{ editing_entry.cheque_number }}"
+                       {% else %}
+                         name="rows[0][cheque_number]"
+                       {% endif %}
+                       class="cb-input"
+                       style="width:100%;">
+              </td>
+              <td>
+                <input type="text"
+                       {% if editing_entry %}
+                         name="bank_narration"
+                         value="{{ editing_entry.bank_narration }}"
+                       {% else %}
+                         name="rows[0][bank_narration]"
+                       {% endif %}
+                       class="brs-narration cb-input"
+                       style="width:100%;"
+                       required>
+              </td>
+              <td class="cb-right">
+                <input type="text"
+                       inputmode="decimal"
+                       {% if editing_entry %}
+                         name="dr_amount"
+                         value="{{ editing_entry.dr_amount }}"
+                       {% else %}
+                         name="rows[0][dr_amount]"
+                       {% endif %}
+                       class="brs-dr cb-input brs-amt cb-right"
+                       required>
+              </td>
+              <td class="cb-right">
+                <input type="text"
+                       inputmode="decimal"
+                       {% if editing_entry %}
+                         name="cr_amount"
+                         value="{{ editing_entry.cr_amount }}"
+                       {% else %}
+                         name="rows[0][cr_amount]"
+                       {% endif %}
+                       class="brs-cr cb-input brs-amt cb-right"
+                       required>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Add row button (only when not editing existing entry) -->
+      {% if not editing_entry %}
+      <div style="margin-top:8px;">
+        <button type="button" id="btn-add-row" class="cb-btn-primary">Add row</button>
+      </div>
+      {% endif %}
+
+      <!-- Submit button centered -->
+      <div style="margin-top:12px; text-align:center;">
+        <button type="submit" class="cb-btn-primary" style="min-width:140px;">
+          {% if editing_entry %}Update{% else %}Submit{% endif %}
+        </button>
+      </div>
+    </div>
+  </form>
+  {% endif %}
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // enable paste into all date inputs (dd-mm-yyyy or yyyy-mm-dd)
+    function wireDatePaste(el) {
+      el.addEventListener('paste', function (e) {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text').trim();
+        if (!text) return;
+        let iso = text;
+
+        // dd-mm-yyyy -> yyyy-mm-dd
+        const m1 = text.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+        // dd/mm/yyyy -> yyyy-mm-dd
+        const m2 = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+        if (m1) {
+          iso = `${m1[3]}-${m1[2]}-${m1[1]}`;
+        } else if (m2) {
+          iso = `${m2[3]}-${m2[2]}-${m2[1]}`;
+        }
+        el.value = iso;
+        el.dispatchEvent(new Event('change'));
+      });
+    }
+
+    document.querySelectorAll('input[type="date"].brs-date').forEach(wireDatePaste);
+
+    // dynamic table rows with Dr/Cr toggle
+    const tbody = document.getElementById('brs-tbody');
+    const addRowBtn = document.getElementById('btn-add-row');
+
+    function wireTypeToggle(row) {
+      const typeSelect = row.querySelector('.brs-type');
+      const drInput = row.querySelector('.brs-dr');
+      const crInput = row.querySelector('.brs-cr');
+
+      function updateAmountFields() {
+        if (!typeSelect || !drInput || !crInput) return;
+        if (typeSelect.value === 'Dr') {
+          drInput.disabled = false;
+          crInput.disabled = true;
+          crInput.value = '';
+        } else {
+          crInput.disabled = false;
+          drInput.disabled = true;
+          drInput.value = '';
+        }
+      }
+
+      if (typeSelect) {
+        typeSelect.addEventListener('change', updateAmountFields);
+        updateAmountFields();
+      }
+    }
+
+    // Indian formatting for amount fields
+    function wireAmountFormatting(row) {
+      const amtInputs = row.querySelectorAll('.brs-amt');
+      amtInputs.forEach(function (inp) {
+        inp.addEventListener('blur', function () {
+          const raw = inp.value.replace(/,/g, '').trim();
+          if (raw === '' || isNaN(raw)) return;
+          const num = Number(raw);
+          inp.value = num.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+        });
+        inp.addEventListener('focus', function () {
+          inp.value = inp.value.replace(/,/g, '');
+        });
+      });
+    }
+
+    if (tbody) {
+      const firstRow = tbody.querySelector('tr');
+      if (firstRow) {
+        wireTypeToggle(firstRow);
+        wireAmountFormatting(firstRow);
+      }
+    }
+
+    function getNextIndex() {
+      return tbody ? tbody.querySelectorAll('tr').length : 0;
+    }
+
+    if (addRowBtn && tbody) {
+      addRowBtn.addEventListener('click', function () {
+        const idx = getNextIndex();
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td class="cb-center">
+            <select name="rows[${idx}][entry_type]" class="cb-select brs-type cb-input" required>
+              <option value="Dr">Dr</option>
+              <option value="Cr">Cr</option>
+            </select>
+          </td>
+          <td class="cb-center">
+            <input
+              type="date"
+              name="rows[${idx}][entry_date]"
+              class="brs-date cb-input"
+              required>
+          </td>
+          <td class="cb-center">
+            <input type="text"
+                   name="rows[${idx}][cheque_number]"
+                   class="cb-input"
+                   style="width:100%;">
+          </td>
+          <td>
+            <input type="text"
+                   name="rows[${idx}][bank_narration]"
+                   class="brs-narration cb-input"
+                   style="width:100%;"
+                   required>
+          </td>
+          <td class="cb-right">
+            <input type="text"
+                   inputmode="decimal"
+                   name="rows[${idx}][dr_amount]"
+                   class="brs-dr cb-input brs-amt cb-right"
+                   required>
+          </td>
+          <td class="cb-right">
+            <input type="text"
+                   inputmode="decimal"
+                   name="rows[${idx}][cr_amount]"
+                   class="brs-cr cb-input brs-amt cb-right"
+                   required>
+          </td>
+        `;
+        tbody.appendChild(tr);
+        wireTypeToggle(tr);
+        wireAmountFormatting(tr);
+
+        const dateInput = tr.querySelector('input[type="date"].brs-date');
+        if (dateInput) {
+          wireDatePaste(dateInput);
+        }
+      });
+    }
+
+    // Submit confirmation + success message
+    const brsForm = document.getElementById('brs-entry-form');
+    if (brsForm) {
+      brsForm.addEventListener('submit', function (e) {
+        if (!brsForm.checkValidity()) {
+          return;
+        }
+        const ok = confirm(
+          {% if editing_entry %}
+            'Do you want to update this BRS entry?'
+          {% else %}
+            'Do you want to save these BRS entries?'
+          {% endif %}
+        );
+        if (!ok) {
+          e.preventDefault();
+          return;
+        }
+        alert(
+          {% if editing_entry %}
+            'BRS entry updated successfully.'
+          {% else %}
+            'BRS entries saved successfully.'
+          {% endif %}
+        );
+      });
+    }
+  });
+  </script>
+{% endblock %}

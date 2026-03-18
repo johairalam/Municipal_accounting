@@ -1,0 +1,74 @@
+{% extends "accounts/base_accounts_dashboard.html" %}
+
+{% block title %}Accounts Master | Muni Dashboard{% endblock %}
+
+{% block accounts_content %}
+<style>
+    .lg-header-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid rgba(55,65,81,0.9);
+        padding-bottom: 10px;
+    }
+    .lg-tab {
+        padding: 7px 18px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: #e5e7eb;
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.18s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .lg-tab.active {
+        background: linear-gradient(120deg, #f97316, #facc15);
+        color: #111827;
+        border-color: rgba(250,204,21,0.9);
+        box-shadow: 0 10px 22px rgba(249,115,22,0.7), 0 0 16px rgba(250,204,21,0.9);
+    }
+    .lg-tab:not(.active):hover {
+        border-color: rgba(148,163,184,0.8);
+        background: rgba(15,23,42,0.95);
+    }
+</style>
+
+<div class="lg-header-tabs">
+    {% if 'MENU_ACCOUNTS_MASTER_CREATE' in allowed_codes %}
+    <a href="{% url 'accounts_master_home' %}"
+       class="lg-tab {% if active_master_tab == 'create' %}active{% endif %}">
+        Create Ledger and Group
+    </a>
+    {% endif %}
+
+    {% if 'MENU_ACCOUNTS_MASTER_VIEW_EDIT' in allowed_codes %}
+    <a href="{% url 'accounts_master_view_edit' %}"
+       class="lg-tab {% if active_master_tab == 'view_edit' %}active{% endif %}">
+        View & Edit Ledger and Group
+    </a>
+    {% endif %}
+
+    {% if 'MENU_ACCOUNTS_MASTER_IMPORT' in allowed_codes %}
+    <a href="{% url 'accounts_master_import' %}"
+       class="lg-tab {% if active_master_tab == 'import' %}active{% endif %}">
+        Import Ledger and Group
+    </a>
+    {% endif %}
+    
+    {% if 'MENU_ACCOUNTS_MASTER_EXPORT' in allowed_codes %}
+    <a href="{% url 'accounts_master_export' %}"
+       class="lg-tab {% if active_master_tab == 'export' %}active{% endif %}">
+        Export Ledger and Group
+    </a>
+    {% endif %}
+</div>
+
+    <p style="font-size:13px; margin-top:10px;">
+        Select a tab above to manage Ledger and Group.
+    </p>
+</div>
+{% endblock %}

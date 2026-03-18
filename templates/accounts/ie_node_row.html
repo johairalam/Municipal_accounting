@@ -1,0 +1,58 @@
+{# templates/accounts/ie_node_row.html #}
+{% with row_id=node.id parent_id=node.parent_id|default:"" %}
+<tr
+  data-row-id="{{ row_id }}"
+  data-parent-id="{{ parent_id }}"
+  class="{% if level > 0 %}ie-row-hidden{% endif %}"
+>
+  {% if side == "expense" %}
+    <td>
+      <div class="ie-particular" style="margin-left: {{ level }}em;">
+        {% if node.children and node.children|length > 0 %}
+          <button type="button"
+                  class="tb-toggle-btn"
+                  aria-expanded="false"
+                  data-row-id="{{ row_id }}">
+          </button>
+        {% else %}
+          <span style="display:inline-block;width:16px;"></span>
+        {% endif %}
+        <span>{{ node.name }}</span>
+      </div>
+    </td>
+    <td class="ie-num"
+        data-raw-amount="{% if node.expense and node.expense != 0 %}{{ node.expense }}{% endif %}">
+      {% if node.expense and node.expense != 0 %}
+        {{ node.expense }}
+      {% endif %}
+    </td>
+  {% else %}
+    <td>
+      <div class="ie-particular" style="margin-left: {{ level }}em;">
+        {% if node.children and node.children|length > 0 %}
+          <button type="button"
+                  class="tb-toggle-btn"
+                  aria-expanded="false"
+                  data-row-id="{{ row_id }}">
+          </button>
+        {% else %}
+          <span style="display:inline-block;width:16px;"></span>
+        {% endif %}
+        <span>{{ node.name }}</span>
+      </div>
+    </td>
+    <td class="ie-num"
+        data-raw-amount="{% if node.income and node.income != 0 %}{{ node.income }}{% endif %}">
+      {% if node.income and node.income != 0 %}
+        {{ node.income }}
+      {% endif %}
+    </td>
+  {% endif %}
+</tr>
+
+{% if node.children %}
+  {% for child in node.children %}
+    {% include "accounts/ie_node_row.html" with node=child side=side level=level|add:"1" %}
+  {% endfor %}
+{% endif %}
+{% endwith %}

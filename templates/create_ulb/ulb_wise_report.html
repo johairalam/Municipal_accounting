@@ -1,0 +1,179 @@
+{% extends "dashboards/base_root_dashboard.html" %}
+
+{% block title %}ULB Wise Report | Muni Dashboard{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="font-size:18px; margin-bottom:12px;">ULB Wise Report</h2>
+
+    <!-- Search bar -->
+    <form method="get" style="margin-bottom: 10px; display:flex; gap:8px; align-items:center;">
+        <input
+            type="text"
+            name="q"
+            value="{{ q|default:'' }}"
+            placeholder="Search by ULB name"
+            style="
+                width: 400px;
+                padding:4px 6px;
+                border-radius:6px;
+                border:1px solid #4b5563;
+                background:#020617;
+                color:#e5e7eb;
+                font-size:12px;
+            ">
+        <button
+            type="submit"
+            style="
+                padding:5px 10px;
+                border-radius:999px;
+                border:1px solid #4b5563;
+                background:rgb(5, 130, 87);
+                color:#e5e7eb;
+                font-size:11px;
+                cursor:pointer;
+            ">
+            Search
+        </button>
+    </form>
+
+    <table class="styled-table" style="text-align: left;">
+        <thead>
+            <tr>
+                <th>ULB Name</th>
+                <th>User Name</th>
+                <th>Role</th>
+                <th>Mobile Number</th>
+                <th>Email ID</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in rows %}
+            <tr>
+                <td>{{ row.ulb.ulb_name }}</td>
+
+                {# Developer view: row.dev is the current dev, children = admins/users #}
+                {% if request.user.role == "DEV" %}
+                    {% if row.dev %}
+                        <td>
+                            <!-- Developer -->
+                            <div>{{ row.dev.username }}</div>
+                            <!-- Admins/Users below -->
+                            {% for child in row.children %}
+                                <div>{{ child.username }}</div>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <div>{{ row.dev.role }}</div>
+                            {% for child in row.children %}
+                                <div>{{ child.role }}</div>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <div>{{ row.dev.mobile_number|default:"-" }}</div>
+                            {% for child in row.children %}
+                                <div>{{ child.mobile_number|default:"-" }}</div>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <div>{{ row.dev.email }}</div>
+                            {% for child in row.children %}
+                                <div>{{ child.email }}</div>
+                            {% endfor %}
+                        </td>
+                    {% else %}
+                        <td colspan="4" style="color:#f97373; font-weight:bold; text-align:center;">
+                            not yet assigned
+                        </td>
+                    {% endif %}
+
+                {% elif request.user.role == "ROOT_DEV" %}
+                    {# ROOT_DEV: show all users that have ULB_ACCESS on this ULB (row.users) #}
+                    {% if row.users %}
+                        <td>
+                            {% for u in row.users %}
+                                <div>{{ u.username }}</div>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% for u in row.users %}
+                                <div>{{ u.role }}</div>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% for u in row.users %}
+                                <div>{{ u.mobile_number|default:"-" }}</div>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% for u in row.users %}
+                                <div>{{ u.email }}</div>
+                            {% endfor %}
+                        </td>
+                    {% else %}
+                        <td colspan="4" style="color:#f97373; font-weight:bold; text-align:center;">
+                            not yet assigned
+                        </td>
+                    {% endif %}
+
+                {% else %}
+                    {# ADMIN fallback: only that admin; if no access, not yet assigned #}
+                    {% if row.dev %}
+                        <td>{{ row.dev.username }}</td>
+                        <td>{{ row.dev.role }}</td>
+                        <td>{{ row.dev.mobile_number|default:"-" }}</td>
+                        <td>{{ row.dev.email }}</td>
+                    {% else %}
+                        <td colspan="4" style="color:#f97373; font-weight:bold; text-align:center;">
+                            not yet assigned
+                        </td>
+                    {% endif %}
+                {% endif %}
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5" style="text-align:center; padding:8px;">
+                    No records found.
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+    .styled-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 13px;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #020617;
+        border: 1px solid #1f2937;
+    }
+    .styled-table thead {
+        background: linear-gradient(120deg, #0f172a, #111827);
+    }
+    .styled-table th,
+    .styled-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #1f2937;
+        border-right: 1px solid #1f2937;
+        vertical-align: top;
+    }
+    .styled-table th:first-child,
+    .styled-table td:first-child {
+        border-left: 1px solid #1f2937;
+    }
+    .styled-table tbody tr:nth-child(even) {
+        background-color: #020617;
+    }
+    .styled-table tbody tr:nth-child(odd) {
+        background-color: #020617;
+    }
+    .styled-table tbody tr:hover {
+        background-color: #0b1120;
+    }
+</style>
+{% endblock %}

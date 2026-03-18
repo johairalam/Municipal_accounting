@@ -1,0 +1,209 @@
+{# templates/accounts/base_brs.html #}
+{% extends "accounts/base_accounts_dashboard.html" %}
+{% load static %}
+
+{% block accounts_content %}
+<div class="cb-page">
+  <div class="cb-header-row">
+    <h2 id="brs-title">
+      {% block brs_title %}BRS{% endblock %}
+    </h2>
+
+    {% with url_name=request.resolver_match.url_name %}
+    <div class="cb-header-buttons">
+      {# Bank Entry tab → bank_entry view #}
+      <a href="{% url 'accounts_bank_entry' %}" style="text-decoration:none;">
+        <button type="button"
+                class="cb-btn-secondary{% if url_name == 'accounts_bank_entry' %} active{% endif %}">
+          Bank Entry
+        </button>
+      </a>
+
+      {# Show Bank Entry tab #}
+      <a href="{% url 'accounts_brs_show_bank_entry' %}" style="text-decoration:none;">
+        <button type="button"
+                class="cb-btn-secondary{% if url_name == 'accounts_brs_show_bank_entry' %} active{% endif %}">
+          Show Bank Entry
+        </button>
+      </a>
+
+      {# BRS Adjustment tab #}
+      <a href="{% url 'accounts_brs_adjustment' %}" style="text-decoration:none;">
+        <button type="button"
+                class="cb-btn-secondary{% if url_name == 'accounts_brs_adjustment' %} active{% endif %}">
+          BRS Adjustment
+        </button>
+      </a>
+
+      {# Show BRS Adjustment tab #}
+      <a href="{% url 'accounts_show_brs_adjustment' %}" style="text-decoration:none;">
+        <button type="button"
+                class="cb-btn-secondary{% if url_name == 'accounts_show_brs_adjustment' %} active{% endif %}">
+          Show BRS Adjustment
+        </button>
+      </a>
+
+      {# BRS Statement tab #}
+      <a href="{% url 'accounts_brs_statement' %}" style="text-decoration:none;">
+        <button type="button"
+                class="cb-btn-secondary{% if url_name == 'accounts_brs_statement' %} active{% endif %}">
+          BRS Statement
+        </button>
+      </a>
+    </div>
+    {% endwith %}
+  </div>
+
+  {% block brs_content %}{% endblock %}
+</div>
+
+<style>
+.cb-page {
+  display:flex;
+  flex-direction:column;
+  height:calc(92vh - 60px);
+  padding:8px 16px 8px 16px;
+  box-sizing:border-box;
+  margin-left:-30px;
+  margin-right:-20px;
+}
+
+/* header: center title, buttons left below */
+.cb-header-row {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  margin-top:-20px;
+  margin-bottom:6px;
+}
+
+#brs-title {
+  font-weight:bold;
+  color:#fae050;
+  margin:0;
+  text-align:center;
+}
+
+.cb-header-buttons {
+  display:flex;
+  gap:6px;
+  margin-top:6px;
+  align-self:flex-start; /* left under title */
+}
+
+.cb-btn-secondary {
+  padding:4px 10px;
+  font-size:11px;
+  border-radius:4px;
+  border:1px solid #4b5563;
+  background:rgba(15,23,42,0.9);
+  color:#e5e7eb;
+  cursor:pointer;
+}
+
+.cb-btn-secondary.active {
+  border-color:#288cfa;
+  box-shadow:0 0 8px rgba(40,140,250,0.8);
+}
+
+/* common filter + inputs */
+.cb-filter-bar {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:6px;
+  font-size:11px;
+  color:#e5e7eb;
+}
+
+.cb-filter-row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+
+.cb-filter-bar label {
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+
+.cb-input,
+.cb-filter-bar input[type="date"],
+.cb-filter-bar input[type="number"],
+.cb-filter-bar input[type="text"],
+.cb-filter-bar select.cb-select {
+  padding:3px 6px;
+  border:1px solid #4b5563;
+  border-radius:4px;
+  font-size:11px;
+  background-color:#020617;
+  color:#e5e7eb;
+  white-space:nowrap;
+}
+
+.cb-select {
+  min-width:120px;
+}
+
+.cb-btn-primary {
+  padding:4px 10px;
+  font-size:11px;
+  border-radius:4px;
+  border:1px solid #288cfa;
+  background:linear-gradient(90deg,#288cfa,#22c55e);
+  color:#020617;
+  cursor:pointer;
+  box-shadow:0 0 10px rgba(40,140,250,0.6);
+}
+
+/* common table styles for BRS pages */
+.cb-two-page-wrapper {
+  background:radial-gradient(circle at top left,#0b1220,#020617);
+  box-shadow:0 18px 40px rgba(0,0,0,0.9);
+  border:1px solid #37371f;
+}
+
+.cb-table-wrapper {
+  max-height:50vh;
+  overflow-y:auto;
+}
+
+.cb-table {
+  width:100%;
+  border-collapse:collapse;
+  table-layout:auto;
+  font-size:11px;
+  color:#e5e7eb;
+}
+
+.cb-table th,
+.cb-table td {
+  border-top:1px solid #0266f1;
+  border-bottom:1px solid #0350f6;
+  padding:4px 5px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.cb-table thead th {
+  background:linear-gradient(90deg,#0b1120,#1d4ed8);
+  font-weight:500;
+  font-size:11px;
+  color:#f9fafb;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  text-align:center;
+}
+
+.cb-center {
+  text-align:center;
+}
+
+.cb-right {
+  text-align:right;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>BTC Form 42A</title>
+
+<style>
+
+@page{
+    size:A4;
+    margin:8mm 8mm 8mm 8mm;
+}
+
+body{
+    font-family:"Times New Roman", serif;
+    font-size:12px;
+    margin:0;
+}
+
+.uc-sheet{
+    width:100%;
+}
+
+h3{
+    text-align:center;
+    margin:0;
+    font-size:14px;
+}
+
+h2{
+    text-align:center;
+    margin:0;
+    font-size:15px;
+    text-decoration:underline;
+}
+
+.small{
+    text-align:center;
+    font-size:11px;
+}
+
+.right{
+    text-align:right;
+    font-size:11px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+    font-size:12px;
+}
+
+td,th{
+    border:1px solid black;
+    padding:2px;
+}
+
+.no-border td{
+    border:none;
+}
+
+.section{
+    margin-top:6px;
+    font-size:12px;
+}
+
+.header-blue th{
+    background:#9fb0cc;
+    height:85px;
+    vertical-align:center;
+    font-size:10px;
+    align-items:top;
+    justify-content:center;
+}
+
+/* rotate only inner block, not the cell */
+.vertical{
+    writing-mode: vertical-rl;
+    transform: rotate(-90deg);
+    white-space: normal;
+    
+    
+    transform-origin:50% 50%;
+    text-align:bottom;
+}
+
+/* data cells that contain a rotated block */
+td.vertical-cell{
+    text-align:left;
+    vertical-align:left;
+}
+
+.number-row td{
+    background:#e8a070;
+    text-align:center;
+    font-weight:bold;
+}
+
+.center{
+    text-align:center;
+}
+
+.signature{
+    margin-top:15px;
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+}
+
+ol{
+    margin-top:4px;
+    padding-left:18px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="uc-sheet">
+
+<h3>BTC Form - 42A</h3>
+<h2>FORM FOR UTILISATION CERTIFICATE</h2>
+<div class="small">(See Rule 271)</div>
+
+<div class="right">Not Payable at Treasury</div>
+
+<table>
+<tr>
+<td>Major Head : <b>{{ major_head }}</b></td>
+<td>Treasury Code : <b>{{ treasury_code }}</b></td>
+</tr>
+
+<tr>
+<td>Sub Major Head : <b>{{ sub_major_head }}</b></td>
+<td>DDO Code : <b>{{ ddo_code }}</b></td>
+</tr>
+
+<tr>
+<td>Minor Head : <b>{{ minor_head }}</b></td>
+<td>Bill Code : <b>{{ bill_code }}</b></td>
+</tr>
+
+<tr>
+<td>Sub Head : <b>{{ sub_head }}</b></td>
+<td>Head Code : <b>{{ head_code }}</b></td>
+</tr>
+</table>
+
+<br>
+
+<table class="no-border">
+
+<tr>
+<td>
+Utilization Certificate No : <b>{{ uc_number }}</b>
+</td>
+
+<td class="right">
+Date : {{ uc_date }}
+</td>
+</tr>
+
+<tr>
+<td>
+Office : <b>{{ current_ulb_name }}</b>
+</td>
+
+<td>
+Month : {{ month_name }} / {{ year_text }}
+</td>
+</tr>
+
+</table>
+
+<div class="section">
+
+<b>1.</b>
+Certified that out of Rs. <b>{{ sanctioned_amount }}</b> of Grants-in-aid sanctioned during the year
+<b>{{ year_text }}</b> in favour of <b>{{ current_ulb_name }}</b> under this Department letter no
+<b>{{ letter_no }}</b> dated <b>{{ letter_date }}</b> given in the table below and Rs <b>NIL</b>
+on account of unspent balance of the previous year, a sum of Rs <b>{{ utilized_amount }}</b>
+has been utilized for the purpose for which it was sanctioned and that the balance of
+Rs <b>{{ unutilised_balance }}</b> remained unutilized at the end of the year.
+
+Rs <b>NIL</b> has been surrendered to the Govt vide letter No xxx dated xxx and will be adjusted towards
+the grants-in-aid payable during the next financial year.
+
+</div>
+
+<div class="section">
+
+<b><u>A. For the Grant to Government Offices for various schemes</u></b>
+<br>
+
+Certified that the remaining undrawn amount Rs .......... (in words) has been
+surrendered vide letter no ........ dated ........ and with the remaining drawn grant
+amount Rs ........ has been sent along with this surrender letter.
+
+</div>
+
+<div class="section">
+
+<b>2. Kinds of checks exercised</b>
+<br>
+
+(Audited Accounts, Cash Book, Asset Register, Distribution Register, Stock Register,
+Purchase Register etc)
+
+<br><br>
+
+<table class="no-border">
+
+<tr>
+<td>i. Checked from Treasury Challan</td>
+<td>ii. Checked from Accountant Cashbook</td>
+</tr>
+
+<tr>
+<td>iii. Checked from Treasury Passbook</td>
+<td>iv. Cashbook</td>
+</tr>
+
+<tr>
+<td>v. Others</td>
+<td></td>
+</tr>
+
+</table>
+
+</div>
+
+<div class="section">
+
+<b>3. Particulars of Grants-in-aid</b>
+
+<table>
+
+<tr class="header-blue" style="height: 150px;">
+
+<th style="width:50px;"><div class="vertical">Sl No</div></th>
+<th style="width:50px;"><div class="vertical">Sanction / Allotment Letter No &amp; Date</div></th>
+<th style="width:50px;"><div class="vertical">Name of Grantee Institution / Office</div></th>
+<th style="width:50px;"><div class="vertical">Purpose of Grant / Scheme</div></th>
+<th style="width:50px;"><div class="vertical">Bill No &amp; Date</div></th>
+<th style="width:50px;"><div class="vertical">Amount of Grant Drawn</div></th>
+<th style="width:50px;"><div class="vertical">TV No &amp; Date</div></th>
+<th style="width:50px;"><div class="vertical">Amount UC</div></th>
+<th style="width:50px;"><div class="vertical">Balance Amount</div></th>
+<th style="width:50px;"><div class="vertical">Amount Surrendered</div></th>
+
+</tr>
+
+<tr class="number-row">
+<td>1</td>
+<td>2</td>
+<td>3</td>
+<td>4</td>
+<td>5</td>
+<td>6</td>
+<td>7</td>
+<td>8</td>
+<td>9</td>
+<td>10</td>
+</tr>
+
+{% for g in grant_rows %}
+
+<tr style="height:210px">
+
+<td class="center">{{ forloop.counter }}</td>
+<td class="vertical-cell"><div class="vertical">{{ g.sanction_letter }}</div></td>
+<td class="vertical-cell"><div class="vertical">{{ g.grantee_name }}</div></td>
+<td class="vertical-cell"><div class="vertical">{{ g.purpose }}</div></td>
+<td class="vertical-cell"><div class="vertical">{{ g.bill_no_date }}</div></td>
+<td class="vertical-cell"><div class="vertical">{{ g.grant_drawn }}</div></td>
+<td class="vertical-cell"><div class="vertical">{{ g.tv_no_date }}</div></td>
+<td class="vertical-cell"><div class="vertical">{{ g.amount_uc }}</div></td>
+<td class="vertical-cell"><div class="vertical">{{ g.balance }}</div></td>
+<td class="vertical-cell"><div class="vertical">{{ g.amount_surrendered }}</div></td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+<br>
+
+<div class="right">
+Signature &amp; Stamp of Grantee Institution / Office
+</div>
+
+<br>
+
+<b>This is certified that :</b>
+
+<ol>
+
+<li>
+Audited Accounts Report has been obtained from the Grantee Agency / Institution and the
+same has been kept in this office.
+</li>
+
+<li>
+This Grantee Agency / Institution has been exempted from producing Audited Accounts Report
+and in this case Utilization Certificate is being countersigned on the basis of checking
+of <b>CASH BOOK</b> of Accounts / Records.
+</li>
+
+</ol>
+
+<div class="signature">
+
+<div>
+Counter Signature &amp; Stamp by Sanctioning<br>
+Authority / Officer authorized by him
+</div>
+
+<div>
+Signature &amp; Stamp of Drawing &amp;<br>
+Disbursing Officer for the Grant-in-Aid
+</div>
+
+</div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1160 @@
+{% extends "accounts/base_accounts_dashboard.html" %}
+{% load static %}
+
+{% block accounts_content %}
+<style>
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.txn-page {
+    display: flex;
+    flex-direction: column;
+    height: calc(92vh - 60px);
+    padding: 8px 16px 16px 16px;
+    box-sizing: border-box;
+}
+
+.txn-card {
+    background: radial-gradient(circle at top left, #0b1220, #020617);
+    border-radius: 0;
+    border: 1px solid #1f2937;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.9);
+    padding: 8px 10px 10px 10px;
+    display:flex;
+    flex-direction:column;
+}
+
+.txn-card-header {
+    padding-bottom: 4px;
+    border-bottom: 1px solid #1f2937;
+}
+
+.txn-header-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.txn-tab {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid #4b5563;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #e5e7eb;
+    text-decoration: none;
+    background: #020617;
+}
+
+.txn-tab.active {
+    border-color: #22c55e;
+    background: linear-gradient(120deg, #22c55e33, #0ea5e933);
+    color: #bbf7d0;
+}
+
+.txn-section-box {
+    border: 1px solid rgba(55,65,81,0.9);
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-top: 6px;
+    background: rgba(15,23,42,0.95);
+}
+
+.txn-section-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #e5e7eb;
+    margin-bottom: 4px;
+    background: rgba(31,41,55,0.95);
+    border-radius: 0;
+    padding: 6px 8px;
+    border: 1px solid rgba(75,85,99,0.9);
+}
+
+.txn-form-group {
+    margin-bottom: 4px;
+    font-size: 13px;
+    color: #e5e7eb;
+}
+
+.txn-required-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #e5e7eb;
+    margin-bottom: 2px;
+    display:block;
+}
+
+.form-control {
+    padding: 4px 6px;
+    font-size: 13px;
+    border-radius: 4px;
+    border: 1px solid rgba(75,85,99,0.9);
+    background: #020617;
+    color: #e5e7eb;
+}
+
+.txn-form-grid {
+    display:grid;
+    grid-template-columns: 2fr 1.4fr;
+    gap:8px;
+}
+
+.txn-table-header {
+    display: grid;
+    grid-template-columns: 90px minmax(260px, 1.5fr) 120px 120px 90px;
+    gap: 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #e5e7eb;
+    margin-bottom: 4px;
+    background: rgba(31,41,55,0.95);
+    border-radius: 0;
+    padding: 6px 8px;
+    border: 1px solid rgba(75,85,99,0.9);
+}
+
+.txn-entry-row {
+    display: grid;
+    grid-template-columns: 90px minmax(260px, 1.5fr) 120px 120px 90px;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 4px;
+    width: 100%;
+}
+
+.txn-entry-row select,
+.txn-entry-row input {
+    padding: 4px 6px;
+    font-size: 13px;
+    width: 100%;
+    background: #020617;
+    color: #e5e7eb;
+    border: 1px solid rgba(75,85,99,0.9);
+    border-radius: 4px;
+}
+
+.txn-delete-entry {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(248,113,113,0.9);
+    background: #b91c1c;
+    color: #fef2f2;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+}
+
+.txn-delete-entry:hover {
+    filter: brightness(1.05);
+}
+
+.txn-add-entry-btn {
+    padding: 4px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(56,189,248,0.9);
+    background: transparent;
+    color: #7dd3fc;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+.txn-form-actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+}
+
+#receipt-fields {
+    background: rgba(22,163,74,0.12);
+    border-color: #16a34a;
+}
+
+#payment-fields {
+    background: rgba(59,130,246,0.12);
+    border-color: #3b82f6;
+
+}
+
+/* Inputs inside Other Info (Receipt) */
+#receipt-fields input,
+#receipt-fields select,
+#receipt-fields textarea {
+    background-color: #070d0f;       /* darker background */
+    border-color: #16a34a;
+    color: #dddddd;       /* green border to match box */
+}
+
+/* Inputs inside Other Info (Payment) */
+#payment-fields input,
+#payment-fields select,
+#payment-fields textarea {
+    background-color: #070d0f;      /* darker blue-ish background */
+    border-color: #3b82f6;
+    color: #dddddd;           /* blue border to match box */
+}
+.txn-btn-primary {
+    padding: 8px 22px;
+    border-radius: 999px;
+    border: none;
+    background: linear-gradient(120deg, #22c55e, #0ea5e9);
+    color: #020617;
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.txn-btn-primary:hover {
+    filter: brightness(1.05);
+}
+
+.txn-section-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+</style>
+
+<div class="txn-page">
+    <div class="card txn-card" style="max-height: 80vh; display:flex; flex-direction:column;">
+        <div class="txn-card-header">
+            <h2 style="font-size:18px; text-align: center; margin-bottom:6px;">Edit Transaction</h2>
+        </div>
+
+        {% if 'MENU_ACCOUNTS_TRANSACTION_ENTRY' in allowed_codes %}
+        <form method="post" id="transaction-edit-form"
+              style="width:100%; display:flex; flex-direction:column; flex:1; min-height:0;">
+            {% csrf_token %}
+            <input type="hidden" name="transaction_id" value="{{ txn.id }}">
+
+            <div class="txn-section-box" id="voucher-section" style="margin-top:0; flex-shrink:0;">
+                <p class="txn-section-title">Voucher Details</p>
+                <div class="txn-form-group" style="display:flex; gap:220px; align-items:flex-end; flex-wrap:wrap; margin-bottom:0;">
+                    <div>
+                        <label class="txn-required-label" for="id_voucher_date">Date</label>
+                        <input type="date" id="id_voucher_date" name="voucher_date"
+                               class="form-control" style="width: 180px;" required
+                               value="{{ txn.voucher_date|date:'Y-m-d' }}">
+                    </div>
+
+                    <div>
+                        <label class="txn-required-label" for="id_voucher_type">Voucher Type</label>
+                        <select id="id_voucher_type" name="voucher_type"
+                                class="form-control" style="width: 200px;" required disabled>
+                            <option value="">Select Type</option>
+                            <option value="RECV" {% if txn.voucher_type == 'RECV' %}selected{% endif %}>Receipts</option>
+                            <option value="PYMT" {% if txn.voucher_type == 'PYMT' %}selected{% endif %}>Payments</option>
+                            <option value="CNTR" {% if txn.voucher_type == 'CNTR' %}selected{% endif %}>Contra</option>
+                            <option value="JRNL" {% if txn.voucher_type == 'JRNL' %}selected{% endif %}>Journal</option>
+                        </select>
+                        <input type="hidden" name="voucher_type" value="{{ txn.voucher_type }}">
+                    </div>
+
+                    <div>
+                        <label class="txn-required-label" for="id_voucher_no">Voucher No.</label>
+                        <input type="text" id="id_voucher_no" name="voucher_no"
+                               class="form-control" style="width: 260px;" readonly required
+                               value="{{ txn.voucher_no }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="txn-card-body" style="flex:1; overflow-y:auto;">
+
+                <!-- Accounting Info -->
+                <div class="txn-section-box" id="accounting-section">
+                    <p class="txn-section-title">Accounting Info</p>
+
+                    <div class="txn-table-header" style="text-align: center;">
+                        <div>Type</div>
+                        <div>Particulars</div>
+                        <div>Dr. Amount</div>
+                        <div>Cr. Amount</div>
+                        <div>Action</div>
+                    </div>
+
+                    <div id="accounting-entries" style="margin-top: 2px; width:100%;">
+                        {% for row in entries %}
+                            {% with forloop.counter as idx %}
+                            <div class="txn-entry-row" data-entry="{{ idx }}">
+                                <select name="type_{{ idx }}" class="type-select">
+                                    <option value="Dr" {% if row.entry_type == 'Dr' %}selected{% endif %}>Dr.</option>
+                                    <option value="Cr" {% if row.entry_type == 'Cr' %}selected{% endif %}>Cr.</option>
+                                </select>
+
+                                <!-- LEDGER COMBOBOX START -->
+                                <div class="ledger-combo" data-entry="{{ idx }}" style="position:relative; width:100%;">
+                                    <div style="display:flex; align-items:center; gap:4px;">
+                                        <input type="text"
+                                               name="ledger_search_{{ idx }}"
+                                               class="ledger-search-input"
+                                               placeholder="Type to search ledger"
+                                               autocomplete="off"
+                                               value="{{ row.ledger.name }}"
+                                               style="flex:1; padding:4px 6px; border-radius:6px; border:1px solid rgba(75,85,99,0.9); background:#020617; color:#e5e7eb; font-size:13px;">
+                                    </div>
+                                    <input type="hidden" name="ledger_{{ idx }}" class="ledger-hidden-input" value="{{ row.ledger.id }}">
+                                    <div class="ledger-suggestion-box"
+                                         data-entry="{{ idx }}"
+                                         style="position:absolute; top:100%; left:0; right:0; background:#020617; border:1px solid rgba(75,85,99,0.9); max-height:180px; overflow-y:auto; z-index:50; display:none;">
+                                        {% for ledger in ledgers %}
+                                            <div class="ledger-item"
+                                                 data-id="{{ ledger.id }}"
+                                                 data-name="{{ ledger.name }}"
+                                                 style="padding:4px 6px; cursor:pointer; font-size:13px; color:#e5e7eb;">
+                                                {{ ledger.name }}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <!-- LEDGER COMBOBOX END -->
+
+                                <input type="text" name="dr_amount_{{ idx }}" class="dr-amount amount-input"
+                                       placeholder="Dr"
+                                       value="{% if row.entry_type == 'Dr' %}{{ row.dr_amount }}{% endif %}">
+                                <input type="text" name="cr_amount_{{ idx }}" class="cr-amount amount-input"
+                                       placeholder="Cr"
+                                       value="{% if row.entry_type == 'Cr' %}{{ row.cr_amount }}{% endif %}">
+                                <button type="button" class="txn-delete-entry">Delete</button>
+                            </div>
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
+
+                    <button type="button" id="add-entry" class="txn-add-entry-btn">Add Entry</button>
+                </div>
+
+                <!-- Narration directly below Add Entry -->
+                <div class="txn-section-box" style="margin-top:6px;">
+                    <p class="txn-section-title">Narration</p>
+                    <div class="txn-form-group">
+                        <label class="txn-required-label" for="id_narration">Narration</label>
+                        <textarea id="id_narration" name="narration" class="form-control"
+                                  style="width: 100%; min-height: 70px;" required>{{ txn.narration }}</textarea>
+                    </div>
+                </div>
+
+                <!-- RECEIPT fields -->
+                <div id="receipt-fields" class="txn-section-box" style="display:none; margin-top:6px; background:rgba(22,163,74,0.12); border-color:#16a34a;">
+                    <p class="txn-section-title">Other Info (Receipt)</p>
+
+                    <div class="txn-form-group">
+                        <label class="txn-required-label" for="uc_applicable">UC Applicable?</label>
+                        <select id="uc_applicable" name="uc_applicable" class="form-control" style="width: 150px;" required>
+                            <option value="">Select</option>
+                            <option value="no" {% if receipt_details and not receipt_details.uc_applicable %}selected{% endif %}>No</option>
+                            <option value="yes" {% if receipt_details and receipt_details.uc_applicable %}selected{% endif %}>Yes</option>
+                        </select>
+                    </div>
+
+                    <div id="uc-details" style="display:none;">
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Major Head</label>
+                                <input type="text" name="major_head" style="width: 100%;" value="{{ receipt_details.major_head|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Treasury Code</label>
+                                <input type="text" name="treasury_code" style="width: 100%;" value="{{ receipt_details.treasury_code|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">UC/Bill No.</label>
+                                <input type="text" name="uc_bill_no" style="width: 100%;" value="{{ receipt_details.uc_bill_no|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Dated</label>
+                                <input type="date" name="uc_bill_date" style="width: 100%;"
+                                       value="{% if receipt_details and receipt_details.uc_bill_date %}{{ receipt_details.uc_bill_date|date:'Y-m-d' }}{% endif %}">
+                            </div>
+                        </div>
+
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Sub Major Head</label>
+                                <input type="text" name="sub_major_head" style="width: 100%;" value="{{ receipt_details.sub_major_head|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">DDO Code</label>
+                                <input type="text" name="ddo_code" style="width: 100%;" value="{{ receipt_details.ddo_code|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Letter No.</label>
+                                <input type="text" name="letter_no" style="width: 100%;" value="{{ receipt_details.letter_no|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Dated</label>
+                                <input type="date" name="letter_date" style="width: 100%;"
+                                       value="{% if receipt_details and receipt_details.letter_date %}{{ receipt_details.letter_date|date:'Y-m-d' }}{% endif %}">
+                            </div>
+                        </div>
+
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Minor Head</label>
+                                <input type="text" name="minor_head" style="width: 100%;" value="{{ receipt_details.minor_head|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Bank Code</label>
+                                <input type="text" name="bank_code" style="width: 100%;" value="{{ receipt_details.bank_code|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">TV No.</label>
+                                <input type="text" name="tv_no" style="width: 100%;" value="{{ receipt_details.tv_no|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Dated</label>
+                                <input type="date" name="tv_date" style="width: 100%;"
+                                       value="{% if receipt_details and receipt_details.tv_date %}{{ receipt_details.tv_date|date:'Y-m-d' }}{% endif %}">
+                            </div>
+                        </div>
+
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Sub Head</label>
+                                <input type="text" name="sub_head" style="width: 100%;" value="{{ receipt_details.sub_head|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Bill Code</label>
+                                <input type="text" name="bill_code" style="width: 100%;" value="{{ receipt_details.bill_code|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Grant Amount</label>
+                                <input type="number" step="0.01" name="grant_amount" style="width: 100%;"
+                                       value="{{ receipt_details.grant_amount|default_if_none:'' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PAYMENT fields -->
+                <div id="payment-fields" class="txn-section-box" style="display:none; margin-top:6px;background:rgba(22,163,74,0.12); border-color:#16a34a;">
+                    <p class="txn-section-title">Other Info (Payment)</p>
+
+                    <div style="display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:8px;">
+                        <div class="txn-form-group">
+                            <label class="txn-required-label" for="vendor_name">Vendor Name</label>
+                            <input type="text" name="vendor_name" id="vendor_name" style="width: 100%;"
+                                   value="{{ payment_details.vendor_name|default_if_none:'' }}">
+                        </div>
+                        <div class="txn-form-group">
+                            <label class="txn-required-label" for="vendor_amount">Amount</label>
+                            <input type="number" step="0.01" name="vendor_amount" id="vendor_amount" style="width: 100%;"
+                                   value="{{ payment_details.vendor_amount|default_if_none:'' }}">
+                        </div>
+                        <div class="txn-form-group">
+                            <label class="txn-required-label" for="cheque_no">Cheque No.</label>
+                            <input type="text" name="cheque_no" id="cheque_no" style="width: 100%;"
+                                   value="{{ payment_details.cheque_no|default_if_none:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="txn-form-group" style="margin-top:4px;">
+                        <label class="txn-required-label" for="gst_applicable">GST Applicable?</label>
+                        <select id="gst_applicable" name="gst_applicable" class="form-control" style="width: 150px;">
+                            <option value="">Select</option>
+                            <option value="no" {% if payment_details and not payment_details.gst_applicable %}selected{% endif %}>No</option>
+                            <option value="yes" {% if payment_details and payment_details.gst_applicable %}selected{% endif %}>Yes</option>
+                        </select>
+                    </div>
+
+                    <div id="gst-details" style="display:none;">
+                        <div style="display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:8px;">
+                            <div class="txn-form-group">
+                                <label class="txn-required-label">GST No.</label>
+                                <input type="text" name="gst_no" style="width: 100%;" value="{{ payment_details.gst_no|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="gst_type">GST Type</label>
+                                <select id="gst_type" name="gst_type" style="width: 100%;">
+                                    <option value="">-- Select GST Type --</option>
+                                    <option value="inter" {% if payment_details.gst_type == 'inter' %}selected{% endif %}>Inter State</option>
+                                    <option value="intra" {% if payment_details.gst_type == 'intra' %}selected{% endif %}>Intra State</option>
+                                </select>
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="gst_rate">GST Rate</label>
+                                <select id="gst_rate" name="gst_rate" style="width: 100%;">
+                                    <option value="">-- Select Rate --</option>
+                                    <option value="2" {% if payment_details.gst_rate == 2 %}selected{% endif %}>2%</option>
+                                    <option value="5" {% if payment_details.gst_rate == 5 %}selected{% endif %}>5%</option>
+                                    <option value="12" {% if payment_details.gst_rate == 12 %}selected{% endif %}>12%</option>
+                                    <option value="18" {% if payment_details.gst_rate == 18 %}selected{% endif %}>18%</option>
+                                </select>
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="igst_amount">IGST</label>
+                                <input type="number" step="0.01" name="igst_amount" id="igst_amount" style="width: 100%;"
+                                       value="{{ payment_details.igst_amount|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="cgst_amount">CGST</label>
+                                <input type="number" step="0.01" name="cgst_amount" id="cgst_amount" style="width: 100%;"
+                                       value="{{ payment_details.cgst_amount|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="sgst_amount">SGST</label>
+                                <input type="number" step="0.01" name="sgst_amount" id="sgst_amount" style="width: 100%;"
+                                       value="{{ payment_details.sgst_amount|default_if_none:'' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="txn-form-group" style="margin-top:4px;">
+                        <label class="txn-required-label" for="tds_applicable">TDS Applicable?</label>
+                        <select id="tds_applicable" name="tds_applicable" class="form-control" style="width: 150px;">
+                            <option value="">Select</option>
+                            <option value="no" {% if payment_details and not payment_details.tds_applicable %}selected{% endif %}>No</option>
+                            <option value="yes" {% if payment_details and payment_details.tds_applicable %}selected{% endif %}>Yes</option>
+                        </select>
+                    </div>
+
+                    <div id="tds-details" style="display:none;">
+                        <div style="display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:8px;">
+                            <div class="txn-form-group">
+                                <label class="txn-required-label">PAN No.</label>
+                                <input type="text" name="tds_pan_no" style="width: 100%;" value="{{ payment_details.tds_pan_no|default_if_none:'' }}">
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="tds_section">TDS Section</label>
+                                <select id="tds_section" name="tds_section" style="width: 100%;">
+                                    <option value="">Select Sec</option>
+                                    <option value="92" {% if payment_details.tds_section == '92' %}selected{% endif %}>92</option>
+                                    <option value="94C" {% if payment_details.tds_section == '94C' %}selected{% endif %}>94C</option>
+                                    <option value="94J" {% if payment_details.tds_section == '94J' %}selected{% endif %}>94J</option>
+                                    <option value="94H" {% if payment_details.tds_section == '94H' %}selected{% endif %}>94H</option>
+                                </select>
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="tds_nature">Nature</label>
+                                <select id="tds_nature" name="tds_nature" style="width: 100%;">
+                                    <option value="">Nature</option>
+                                    <option value="salary" {% if payment_details.tds_nature == 'salary' %}selected{% endif %}>Salary</option>
+                                    <option value="contract" {% if payment_details.tds_nature == 'contract' %}selected{% endif %}>Contract</option>
+                                    <option value="professional" {% if payment_details.tds_nature == 'professional' %}selected{% endif %}>Professional</option>
+                                    <option value="commission" {% if payment_details.tds_nature == 'commission' %}selected{% endif %}>Commission</option>
+                                </select>
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="tds_type">Type</label>
+                                <select id="tds_type" name="tds_type" style="width: 100%;">
+                                    <option value="">Select Type</option>
+                                    <option value="individual" {% if payment_details.tds_type == 'individual' %}selected{% endif %}>Individual-HUF</option>
+                                    <option value="other" {% if payment_details.tds_type == 'other' %}selected{% endif %}>Other</option>
+                                </select>
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="tds_rate">Rate</label>
+                                <select id="tds_rate" name="tds_rate" style="width: 100%;">
+                                    <option value="">Select Rate</option>
+                                    <option value="avg" {% if payment_details.tds_rate == 'avg' %}selected{% endif %}>Avg Rate</option>
+                                    <option value="1" {% if payment_details.tds_rate == '1' %}selected{% endif %}>1%</option>
+                                    <option value="2" {% if payment_details.tds_rate == '2' %}selected{% endif %}>2%</option>
+                                    <option value="10" {% if payment_details.tds_rate == '10' %}selected{% endif %}>10%</option>
+                                </select>
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="tds_amount">TDS Amount</label>
+                                <input type="number" step="0.01" name="tds_amount" id="tds_amount" style="width: 100%;"
+                                       value="{{ payment_details.tds_amount|default_if_none:'' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="txn-form-actions">
+                    <button type="button"
+                    class="txn-btn-primary"onclick="if (confirm('Are you sure you want to update this transaction?')) { document.getElementById('transaction-edit-form').submit(); }">
+                 Update Transaction
+                    </button>
+                </div>
+
+            </div>
+        </form>
+        {% else %}
+            <p style="margin-top:8px; font-size:13px; color:#f87171;">
+                You do not have permission to edit transactions.
+            </p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+let entryCounter = {{ entries|length }};
+let lastTotalDr = 0;
+let lastTotalCr = 0;
+
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('transaction-edit-form');
+    const voucherTypeEl = document.getElementById('id_voucher_type');
+    const ucApplicable = document.getElementById('uc_applicable');
+    const gstApplicable = document.getElementById('gst_applicable');
+    const gstTypeEl = document.getElementById('gst_type');
+    const tdsApplicable = document.getElementById('tds_applicable');
+    const tdsSectionEl = document.getElementById('tds_section');
+    const tdsTypeEl = document.getElementById('tds_type');
+
+    // Accounting rows initial
+    document.querySelectorAll('.txn-entry-row').forEach(row => {
+        setupRowEvents(row);
+    });
+
+    document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('txn-delete-entry')) {
+            const row = e.target.closest('.txn-entry-row');
+            if (row) {
+                row.remove();
+                recalcTotalsAndSetBaseline();
+                ensureLastCrBalanceRow();
+                updateLastCrBalanceAmount();
+            }
+        }
+    });
+
+    const addEntryBtn = document.getElementById('add-entry');
+    if (addEntryBtn) {
+        addEntryBtn.addEventListener('click', function () {
+            entryCounter++;
+            const container = document.getElementById('accounting-entries');
+            const newRow = document.createElement('div');
+            newRow.className = 'txn-entry-row';
+            newRow.dataset.entry = entryCounter;
+            newRow.innerHTML = `
+                <select name="type_${entryCounter}" class="type-select">
+                    <option value="Dr">Dr.</option>
+                    <option value="Cr">Cr.</option>
+                </select>
+
+                <div class="ledger-combo" data-entry="${entryCounter}" style="position:relative; width:100%;">
+                    <div style="display:flex; align-items:center; gap:4px;">
+                        <input type="text"
+                               name="ledger_search_${entryCounter}"
+                               class="ledger-search-input"
+                               placeholder="Type to search ledger"
+                               autocomplete="off"
+                               style="flex:1; padding:4px 6px; border-radius:6px; border:1px solid rgba(75,85,99,0.9); background:#020617; color:#e5e7eb; font-size:13px;">
+                    </div>
+                    <input type="hidden" name="ledger_${entryCounter}" class="ledger-hidden-input">
+
+                    <div class="ledger-suggestion-box"
+                         data-entry="${entryCounter}"
+                         style="position:absolute; top:100%; left:0; right:0; background:#020617; border:1px solid rgba(75,85,99,0.9); max-height:180px; overflow-y:auto; z-index:50; display:none;">
+                        {% for ledger in ledgers %}
+                            <div class="ledger-item"
+                                 data-id="{{ ledger.id }}"
+                                 data-name="{{ ledger.name }}"
+                                 style="padding:4px 6px; cursor:pointer; font-size:13px; color:#e5e7eb;">
+                                {{ ledger.name }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <input type="text" name="dr_amount_${entryCounter}" class="dr-amount amount-input" placeholder="Dr">
+                <input type="text" name="cr_amount_${entryCounter}" class="cr-amount amount-input" placeholder="Cr">
+                <button type="button" class="txn-delete-entry">Delete</button>
+            `;
+            container.appendChild(newRow);
+            setupRowEvents(newRow);
+            initLedgerCombosForRow(newRow);
+            recalcTotalsAndSetBaseline();
+            ensureLastCrBalanceRow();
+            updateLastCrBalanceAmount();
+        });
+    }
+
+    // Receipt / Payment toggle based on voucher_type
+    toggleVoucherFields();
+
+    if (ucApplicable) {
+        ucApplicable.addEventListener('change', function () {
+            const ucDetails = document.getElementById('uc-details');
+            const ucFields = ucDetails.querySelectorAll('input');
+            if (this.value === 'yes') {
+                ucDetails.style.display = 'block';
+                ucFields.forEach(f => f.required = true);
+            } else {
+                ucDetails.style.display = 'none';
+                ucFields.forEach(f => {
+                    f.required = false;
+                    f.value = '';
+                });
+            }
+        });
+        ucApplicable.dispatchEvent(new Event('change'));
+    }
+
+    if (gstApplicable) {
+        gstApplicable.addEventListener('change', function () {
+            const details = document.getElementById('gst-details');
+            const gstFields = details.querySelectorAll('input, select');
+            if (this.value === 'yes') {
+                details.style.display = 'block';
+                gstFields.forEach(f => f.required = true);
+            } else {
+                details.style.display = 'none';
+                gstFields.forEach(f => {
+                    f.required = false;
+                    f.value = '';
+                });
+                const igst = document.getElementById('igst_amount');
+                const cgst = document.getElementById('cgst_amount');
+                const sgst = document.getElementById('sgst_amount');
+                if (igst) igst.value = '';
+                if (cgst) cgst.value = '';
+                if (sgst) sgst.value = '';
+            }
+        });
+        gstApplicable.dispatchEvent(new Event('change'));
+    }
+
+    if (gstTypeEl) {
+        gstTypeEl.addEventListener('change', function () {
+            const igst = document.getElementById('igst_amount');
+            const cgst = document.getElementById('cgst_amount');
+            const sgst = document.getElementById('sgst_amount');
+            if (!igst || !cgst || !sgst) return;
+
+            if (this.value === 'inter') {
+                igst.disabled = false;
+                cgst.disabled = true;
+                sgst.disabled = true;
+                cgst.value = '';
+                sgst.value = '';
+            } else if (this.value === 'intra') {
+                igst.disabled = true;
+                cgst.disabled = false;
+                sgst.disabled = false;
+                igst.value = '';
+            } else {
+                igst.disabled = true;
+                cgst.disabled = true;
+                sgst.disabled = true;
+                igst.value = '';
+                cgst.value = '';
+                sgst.value = '';
+            }
+        });
+        gstTypeEl.dispatchEvent(new Event('change'));
+    }
+
+    if (tdsApplicable) {
+        tdsApplicable.addEventListener('change', function () {
+            const box = document.getElementById('tds-details');
+            const tdsFields = box.querySelectorAll('input, select');
+            if (this.value === 'yes') {
+                box.style.display = 'block';
+                tdsFields.forEach(f => f.required = true);
+            } else {
+                box.style.display = 'none';
+                tdsFields.forEach(f => {
+                    f.required = false;
+                    f.value = '';
+                });
+            }
+        });
+        tdsApplicable.dispatchEvent(new Event('change'));
+    }
+
+    if (tdsSectionEl) {
+        tdsSectionEl.addEventListener('change', function () {
+            // optional: copy your original TDS logic here if needed
+        });
+    }
+
+    if (tdsTypeEl) {
+        tdsTypeEl.addEventListener('change', function () {
+            // optional: copy your original TDS logic here if needed
+        });
+    }
+
+    initLedgerCombos();
+
+    // initialize baseline + auto-balance once on load
+    recalcTotalsAndSetBaseline();
+    ensureLastCrBalanceRow();
+    updateLastCrBalanceAmount();
+
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const container = document.getElementById('accounting-entries');
+            const rows = Array.from(container.querySelectorAll('.txn-entry-row'));
+
+            for (const row of rows) {
+                const typeSel = row.querySelector('.type-select');
+                const ledgerHidden = row.querySelector('.ledger-hidden-input');
+                const drInput = row.querySelector('.dr-amount');
+                const crInput = row.querySelector('.cr-amount');
+
+                const typeVal = (typeSel && typeSel.value) || '';
+                const ledgerVal = (ledgerHidden && ledgerHidden.value) || '';
+                const drVal = parseAmountRaw(drInput && drInput.value);
+                const crVal = parseAmountRaw(crInput && crInput.value);
+
+                const hasSomething = typeVal || ledgerVal || drVal !== 0 || crVal !== 0;
+
+                if (hasSomething) {
+                    if (!typeVal || !ledgerVal || (drVal === 0 && crVal === 0)) {
+                        alert('Every row that has any value must have Type, Ledger, and amount filled.');
+                        return;
+                    }
+                }
+            }
+
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            if (!confirm('Are you sure you want to update this transaction?')) {
+                return;
+            }
+            form.submit();
+        });
+    }
+});
+
+// ================== VOUCHER FIELDS TOGGLE ==================
+function toggleVoucherFields() {
+    const type = document.getElementById('id_voucher_type').value;
+    const receiptBox = document.getElementById('receipt-fields');
+    const paymentBox = document.getElementById('payment-fields');
+    if (!receiptBox || !paymentBox) return;
+
+    receiptBox.style.display = 'none';
+    paymentBox.style.display = 'none';
+
+    if (type === 'RECV') {
+        receiptBox.style.display = 'block';
+    } else if (type === 'PYMT') {
+        paymentBox.style.display = 'block';
+    }
+}
+
+// ============== AMOUNT PARSE & FORMAT (INDIAN) =============
+
+function parseAmountRaw(value) {
+    if (!value) return 0;
+    const num = value.toString().replace(/[^0-9.]/g, '');
+    return num ? parseFloat(num) : 0;
+}
+
+function formatIndianCurrency(value) {
+    if (!value) return '';
+    let num = value.toString().replace(/[^0-9.]/g, '');
+    if (num === '') return '';
+    let parts = num.split('.');
+    let integerPart = parts[0];
+    let decimalPart = parts[1] || '';
+    decimalPart = decimalPart.substring(0, 2);
+    let lastThree = integerPart.slice(-3);
+    let otherNumbers = integerPart.slice(0, -3);
+    if (otherNumbers !== '') {
+        lastThree = ',' + lastThree;
+    }
+    let formatted = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree;
+    if (decimalPart.length > 0) {
+        formatted = formatted + '.' + decimalPart.padEnd(2, '0');
+    } else {
+        formatted = formatted + '.00';
+    }
+    return formatted;
+}
+
+function setupAmountFormatting(input) {
+    if (!input) return;
+    input.addEventListener('blur', function () {
+        if (this.disabled) return;
+        this.value = formatIndianCurrency(this.value);
+        handleAmountOrTypeChanged();
+    });
+    input.addEventListener('input', function () {
+        if (this.disabled) return;
+        this.value = this.value.replace(/[^0-9.]/g, '');
+    });
+}
+
+// ================== TYPE / ROW HANDLING ====================
+
+function applyTypeToRow(row) {
+    const typeSelect = row.querySelector('.type-select');
+    const drInput = row.querySelector('.dr-amount');
+    const crInput = row.querySelector('.cr-amount');
+    if (!typeSelect || !drInput || !crInput) return;
+    if (typeSelect.value === 'Dr') {
+        drInput.disabled = false;
+        crInput.disabled = true;
+        crInput.value = '';
+    } else if (typeSelect.value === 'Cr') {
+        crInput.disabled = false;
+        drInput.disabled = true;
+        drInput.value = '';
+    } else {
+        drInput.disabled = true;
+        crInput.disabled = true;
+    }
+}
+
+function setupRowEvents(row) {
+    const typeSelect = row.querySelector('.type-select');
+    const drInput = row.querySelector('.dr-amount');
+    const crInput = row.querySelector('.cr-amount');
+    if (typeSelect) {
+        typeSelect.addEventListener('change', function () {
+            applyTypeToRow(row);
+            handleAmountOrTypeChanged();
+        });
+        applyTypeToRow(row);
+    }
+    if (drInput) setupAmountFormatting(drInput);
+    if (crInput) setupAmountFormatting(crInput);
+}
+
+// ============== AUTO BALANCING LOGIC =======================
+
+function recalcTotalsAndSetBaseline() {
+    const totals = calculateTotals();
+    lastTotalDr = totals.totalDr;
+    lastTotalCr = totals.totalCr;
+}
+
+function calculateTotals(excludeLastBalanceRow = false) {
+    const container = document.getElementById('accounting-entries');
+    if (!container) return { totalDr: 0, totalCr: 0 };
+    const rows = Array.from(container.querySelectorAll('.txn-entry-row'));
+    let totalDr = 0;
+    let totalCr = 0;
+
+    const effectiveRows = excludeLastBalanceRow && rows.length > 1
+        ? rows.slice(0, rows.length - 1)
+        : rows;
+
+    effectiveRows.forEach(r => {
+        const t = r.querySelector('.type-select')?.value;
+        const drI = r.querySelector('.dr-amount');
+        const crI = r.querySelector('.cr-amount');
+        const drVal = parseAmountRaw(drI?.value);
+        const crVal = parseAmountRaw(crI?.value);
+        if (t === 'Dr') {
+            totalDr += drVal;
+        } else if (t === 'Cr') {
+            totalCr += crVal;
+        }
+    });
+    return { totalDr, totalCr };
+}
+
+function ensureLastCrBalanceRow() {
+    const container = document.getElementById('accounting-entries');
+    if (!container) return;
+    let rows = Array.from(container.querySelectorAll('.txn-entry-row'));
+    if (rows.length < 2) return;
+
+    let lastRow = rows[rows.length - 1];
+    let lastTypeSelect = lastRow.querySelector('.type-select');
+
+    if (!lastTypeSelect || lastTypeSelect.value !== 'Cr') {
+        const lastCrInput = lastRow.querySelector('.cr-amount');
+        if (lastCrInput) lastCrInput.value = '';
+
+        entryCounter++;
+        const newRow = document.createElement('div');
+        newRow.className = 'txn-entry-row';
+        newRow.dataset.entry = entryCounter;
+        newRow.innerHTML = `
+            <select name="type_${entryCounter}" class="type-select">
+                <option value="Dr">Dr.</option>
+                <option value="Cr" selected>Cr.</option>
+            </select>
+
+            <div class="ledger-combo" data-entry="${entryCounter}" style="position:relative; width:100%;">
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <input type="text"
+                           name="ledger_search_${entryCounter}"
+                           class="ledger-search-input"
+                           placeholder="Type to search ledger"
+                           autocomplete="off"
+                           style="flex:1; padding:4px 6px; border-radius:6px; border:1px solid rgba(75,85,99,0.9); background:#020617; color:#e5e7eb; font-size:13px;">
+                </div>
+                <input type="hidden" name="ledger_${entryCounter}" class="ledger-hidden-input">
+
+                <div class="ledger-suggestion-box"
+                     data-entry="${entryCounter}"
+                     style="position:absolute; top:100%; left:0; right:0; background:#020617; border:1px solid rgba(75,85,99,0.9); max-height:180px; overflow-y:auto; z-index:50; display:none;">
+                    {% for ledger in ledgers %}
+                        <div class="ledger-item"
+                             data-id="{{ ledger.id }}"
+                             data-name="{{ ledger.name }}"
+                             style="padding:4px 6px; cursor:pointer; font-size:13px; color:#e5e7eb;">
+                            {{ ledger.name }}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <input type="text" name="dr_amount_${entryCounter}" class="dr-amount amount-input" placeholder="Dr">
+            <input type="text" name="cr_amount_${entryCounter}" class="cr-amount amount-input" placeholder="Cr">
+            <button type="button" class="txn-delete-entry">Delete</button>
+        `;
+        container.appendChild(newRow);
+        setupRowEvents(newRow);
+        initLedgerCombosForRow(newRow);
+    }
+}
+
+function updateLastCrBalanceAmount() {
+    const container = document.getElementById('accounting-entries');
+    if (!container) return;
+    const rows = Array.from(container.querySelectorAll('.txn-entry-row'));
+    if (rows.length < 2) return;
+
+    const lastRow = rows[rows.length - 1];
+    const lastTypeSelect = lastRow.querySelector('.type-select');
+    const lastDrInput = lastRow.querySelector('.dr-amount');
+    const lastCrInput = lastRow.querySelector('.cr-amount');
+    if (!lastTypeSelect || !lastDrInput || !lastCrInput) return;
+
+    const totals = calculateTotals(true);
+    const diff = totals.totalDr - totals.totalCr;
+
+    lastDrInput.value = '';
+    lastCrInput.value = '';
+
+    if (Math.abs(diff) < 0.01) {
+        return;
+    }
+
+    lastTypeSelect.value = 'Cr';
+    applyTypeToRow(lastRow);
+    lastCrInput.value = formatIndianCurrency(Math.abs(diff));
+}
+
+function handleAmountOrTypeChanged() {
+    const container = document.getElementById('accounting-entries');
+    if (!container) return;
+    const rows = Array.from(container.querySelectorAll('.txn-entry-row'));
+    if (rows.length === 0) return;
+
+    // Auto-fill 2nd row opposite of 1st if empty
+    if (rows.length >= 2) {
+        const row1 = rows[0];
+        const row2 = rows[1];
+
+        const row1Type = row1.querySelector('.type-select')?.value;
+        const row2TypeSelect = row2.querySelector('.type-select');
+        const row1Dr = parseAmountRaw(row1.querySelector('.dr-amount')?.value);
+        const row1Cr = parseAmountRaw(row1.querySelector('.cr-amount')?.value);
+
+        const row2Dr = parseAmountRaw(row2.querySelector('.dr-amount')?.value);
+        const row2Cr = parseAmountRaw(row2.querySelector('.cr-amount')?.value);
+
+        let row1Amt = 0;
+        if (row1Type === 'Dr') row1Amt = row1Dr;
+        else if (row1Type === 'Cr') row1Amt = row1Cr;
+
+        if (row1Amt > 0 && row2Dr === 0 && row2Cr === 0) {
+            if (row1Type === 'Dr') {
+                if (row2TypeSelect && !row2TypeSelect.value) {
+                    row2TypeSelect.value = 'Cr';
+                    applyTypeToRow(row2);
+                }
+                const crInput = row2.querySelector('.cr-amount');
+                if (crInput && !crInput.value) {
+                    crInput.value = formatIndianCurrency(row1Amt);
+                }
+            } else if (row1Type === 'Cr') {
+                if (row2TypeSelect && !row2TypeSelect.value) {
+                    row2TypeSelect.value = 'Dr';
+                    applyTypeToRow(row2);
+                }
+                const drInput = row2.querySelector('.dr-amount');
+                if (drInput && !drInput.value) {
+                    drInput.value = formatIndianCurrency(row1Amt);
+                }
+            }
+        }
+    }
+
+    ensureLastCrBalanceRow();
+    updateLastCrBalanceAmount();
+}
+
+// ================= LEDGER COMBOBOX LOGIC ===================
+
+function initLedgerCombos() {
+    document.querySelectorAll('.ledger-combo').forEach(combo => {
+        initLedgerCombosForRow(combo.closest('.txn-entry-row'));
+    });
+}
+
+function initLedgerCombosForRow(row) {
+    if (!row) return;
+    const combo = row.querySelector('.ledger-combo');
+    if (!combo) return;
+
+    const searchInput = combo.querySelector('.ledger-search-input');
+    const hiddenInput = combo.querySelector('.ledger-hidden-input');
+    const box = combo.querySelector('.ledger-suggestion-box');
+    if (!searchInput || !hiddenInput || !box) return;
+
+    function filterList() {
+        const q = searchInput.value.trim().toLowerCase();
+        box.style.display = 'block';
+        box.querySelectorAll('.ledger-item').forEach(item => {
+            const name = item.getAttribute('data-name').toLowerCase();
+            if (!q || name.includes(q)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    searchInput.addEventListener('input', function () {
+        hiddenInput.value = '';
+        filterList();
+    });
+
+    searchInput.addEventListener('focus', function () {
+        filterList();
+    });
+
+    searchInput.addEventListener('click', function () {
+        filterList();
+    });
+
+    box.addEventListener('click', function (e) {
+        const item = e.target.closest('.ledger-item');
+        if (!item) return;
+        const id = item.getAttribute('data-id');
+        const name = item.getAttribute('data-name');
+        hiddenInput.value = id;
+        searchInput.value = name;
+        box.style.display = 'none';
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!combo.contains(e.target)) {
+            box.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}

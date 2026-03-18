@@ -1,0 +1,1388 @@
+{% extends "accounts/base_accounts_dashboard.html" %}
+
+{% block title %}Transaction Entry | Muni Dashboard{% endblock %}
+
+{% block accounts_content %}
+<style>
+    .txn-header-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid rgba(55,65,81,0.9);
+        padding-bottom: 10px;
+    }
+    .txn-tab {
+        padding: 7px 18px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: #e5e7eb;
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.18s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .txn-tab.active {
+        background: linear-gradient(120deg, #f97316, #facc15);
+        color: #111827;
+        border-color: rgba(250,204,21,0.9);
+        box-shadow: 0 10px 22px rgba(249,115,22,0.7), 0 0 16px rgba(250,204,21,0.9);
+    }
+    .txn-tab:not(.active):hover {
+        border-color: rgba(148,163,184,0.8);
+        background: rgba(15,23,42,0.95);
+    }
+
+    .txn-card {
+        width: 100%;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        max-height: 520px; /* card height limit */
+        min-height: 0;     /* <-- added */
+    }
+
+    /* body must scroll inside the card */
+    .txn-card-body {
+        flex: 1 1 auto;
+        overflow-y: auto; 
+        overflow-y: hidden;/* <== ensure vertical scroll here */
+        padding-right: 4px;
+        min-height: 0;    /* <-- added */
+    }
+
+    .txn-form-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        row-gap: 12px;
+        margin-top: 4px;
+        width: 100%;
+    }
+
+    .txn-section-box {
+        border: 1px solid rgba(55,65,81,0.9);
+        border-radius: 8px;
+        padding: 10px 14px;
+        /* margin-top removed to fit content tighter */
+        background: rgba(15,23,42,0.85);
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* voucher-section must not shrink when body scrolls */
+    #voucher-section {
+        flex-shrink: 0; /* <== this keeps Voucher Details fixed in place */
+    }
+
+    .txn-section-title {
+        margin: 0 0 4px 0; /* smaller bottom margin */
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #9ca3af;
+    }
+
+    .txn-form-group label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 2px; /* tighter */
+        color: #e5e7eb;
+    }
+
+    .txn-form-group input,
+    .txn-form-group select,
+    .txn-form-group textarea {
+        max-width: 100%;
+        padding: 4px 6px;
+        border-radius: 6px;
+        border: 1px solid rgba(75,85,99,0.9);
+        background: #020617;
+        color: #e5e7eb;
+        font-size: 13px;
+        box-sizing: border-box;
+    }
+
+    .txn-required-label::after {
+        content: " *";
+        color: #f87171;
+    }
+
+    .txn-table-header {
+        display: grid;
+        grid-template-columns: 90px minmax(260px, 1.5fr) 120px 120px 90px;
+        gap: 8px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #e5e7eb;
+        margin-bottom: 4px;
+        background: rgba(31,41,55,0.95);
+        border-radius: 0;
+        padding: 6px 8px;
+        border: 1px solid rgba(75,85,99,0.9);
+    }
+
+    .txn-entry-row {
+        display: grid;
+        grid-template-columns: 90px minmax(260px, 1.5fr) 120px 120px 90px;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 4px;
+        width: 100%;
+    }
+
+    .txn-entry-row select,
+    .txn-entry-row input {
+        padding: 4px 6px;
+        font-size: 13px;
+        width: 100%;
+        background: #020617;
+        color: #e5e7eb;
+    }
+
+    .txn-delete-entry {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(248,113,113,0.9);
+        background: #b91c1c;
+        color: #fef2f2;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        width: 100%;
+        text-align: center;
+    }
+
+    .txn-delete-entry:hover {
+        filter: brightness(1.05);
+    }
+
+    .txn-add-entry-btn {
+        padding: 4px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(56,189,248,0.9);
+        background: transparent;
+        color: #7dd3fc;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        cursor: pointer;
+        margin-top: 4px;
+    }
+
+    .txn-form-actions {
+        margin-top: 10px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .txn-btn-primary {
+        padding: 8px 22px;
+        border-radius: 999px;
+        border: none;
+        background: linear-gradient(120deg, #22c55e, #0ea5e9);
+        color: #020617;
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        cursor: pointer;
+    }
+
+    .txn-btn-primary:hover {
+        filter: brightness(1.05);
+    }
+
+    .txn-success-banner {
+        padding: 8px 12px;
+        background: #064e3b;
+        color: #bbf7d0;
+        font-weight: bold;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        font-size: 13px;
+    }
+
+    .txn-section-disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+</style>
+
+<div class="txn-header-tabs">
+    {% if 'MENU_ACCOUNTS_TRANSACTIONS' in allowed_codes %}
+    <a href="{% url 'accounts_transaction_entry' %}"
+       class="txn-tab {% if active_section == 'transactions' %}active{% endif %}">
+        Transaction Entry
+    </a>
+    {% endif %}
+</div>
+
+<div id="txn-success-message"
+     style="display:none; color:#16a34a; font-weight:600; margin:8px 0; text-align:center;">
+    Transaction saved successfully.
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        {% if message.tags == 'success' %}
+            <div id="success_banner"
+                 style="margin:8px 0; text-align:center; color:#16a34a; font-weight:600;">
+                {{ message }}
+            </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+<div class="card txn-card" style="max-height: 80vh; display:flex; flex-direction:column;">
+    <div class="txn-card-header">
+        <h2 style="font-size:18px; text-align: center; margin-bottom:6px;">Transaction Entry</h2>
+    </div>
+
+    {% if 'MENU_ACCOUNTS_TRANSACTION_ENTRY' in allowed_codes %}
+    <form method="post" id="transaction-form"
+          style="width:100%; display:flex; flex-direction:column; flex:1; min-height:0;"> <!-- min-height:0 added -->
+        {% csrf_token %}
+
+        <div class="txn-section-box" id="voucher-section" style="margin-top:0; flex-shrink:0;">
+            <p class="txn-section-title">Voucher Details</p>
+            <div class="txn-form-group" style="display:flex; gap:220px; align-items:flex-end; flex-wrap:wrap; margin-bottom:0;">
+                <div>
+                    <label class="txn-required-label" for="id_voucher_date">Date</label>
+                    <input type="date" id="id_voucher_date" name="voucher_date"
+                           class="form-control" style="width: 180px;" required>
+                </div>
+
+                <div>
+                    <label class="txn-required-label" for="id_voucher_type">Voucher Type</label>
+                    <select id="id_voucher_type" name="voucher_type"
+                            class="form-control" style="width: 200px;" required>
+                        <option value="">Select Type</option>
+                        <option value="RECV">Receipts</option>
+                        <option value="PYMT">Payments</option>
+                        <option value="CNTR">Contra</option>
+                        <option value="JRNL">Journal</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="txn-required-label" for="id_voucher_no">Voucher No.</label>
+                    <input type="text" id="id_voucher_no" name="voucher_no"
+                           class="form-control" style="width: 260px;" readonly required>
+                </div>
+            </div>
+        </div>
+
+        <div class="txn-card-body" style="flex:1; overflow-y:auto;">
+            <div class="txn-form-grid">
+
+                <!-- Accounting Info -->
+                <div class="txn-section-box txn-section-disabled" id="accounting-section">
+                    <p class="txn-section-title">Accounting Info</p>
+
+                    <div class="txn-table-header" style="text-align: center;">
+                        <div>Type</div>
+                        <div>Particulars</div>
+                        <div>Dr. Amount</div>
+                        <div>Cr. Amount</div>
+                        <div>Action</div>
+                    </div>
+
+                    <div id="accounting-entries" style="margin-top: 2px; width:100%;">
+                        <div class="txn-entry-row" data-entry="1">
+                            <select name="type_1" class="type-select">
+                                <option value="Dr">Dr.</option>
+                                <option value="Cr">Cr.</option>
+                            </select>
+
+                            <!-- LEDGER COMBOBOX START -->
+                            <div class="ledger-combo" data-entry="1" style="position:relative; width:100%;">
+                                <div style="display:flex; align-items:center; gap:4px;">
+                                    <input type="text"
+                                           name="ledger_search_1"
+                                           class="ledger-search-input"
+                                           placeholder="Type to search ledger"
+                                           autocomplete="off"
+                                           style="flex:1; padding:4px 6px; border-radius:6px; border:1px solid rgba(75,85,99,0.9); background:#020617; color:#e5e7eb; font-size:13px;">
+                                </div>
+                                <input type="hidden" name="ledger_1" class="ledger-hidden-input">
+                                <div class="ledger-suggestion-box"
+                                     data-entry="1"
+                                     style="position:absolute; top:100%; left:0; right:0; background:#020617; border:1px solid rgba(75,85,99,0.9); max-height:180px; overflow-y:auto; z-index:50; display:none;">
+                                    {% for ledger in ledgers %}
+                                        <div class="ledger-item"
+                                             data-id="{{ ledger.id }}"
+                                             data-name="{{ ledger.name }}"
+                                             style="padding:4px 6px; cursor:pointer; font-size:13px; color:#e5e7eb;">
+                                            {{ ledger.name }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <!-- LEDGER COMBOBOX END -->
+
+                            <input type="text" name="dr_amount_1" class="dr-amount amount-input" placeholder="Dr" disabled>
+                            <input type="text" name="cr_amount_1" class="cr-amount amount-input" placeholder="Cr" disabled>
+                            <button type="button" class="txn-delete-entry">Delete</button>
+                        </div>
+
+                        <div class="txn-entry-row" data-entry="2">
+                            <select name="type_2" class="type-select">
+                                <option value="Cr">Cr.</option>
+                                <option value="Dr">Dr.</option>
+                            </select>
+
+                            <!-- LEDGER COMBOBOX START -->
+                            <div class="ledger-combo" data-entry="2" style="position:relative; width:100%;">
+                                <div style="display:flex; align-items:center; gap:4px;">
+                                    <input type="text"
+                                           name="ledger_search_2"
+                                           class="ledger-search-input"
+                                           placeholder="Type to search ledger"
+                                           autocomplete="off"
+                                           style="flex:1; padding:4px 6px; border-radius:6px; border:1px solid rgba(75,85,99,0.9); background:#020617; color:#e5e7eb; font-size:13px;">
+                                </div>
+                                <input type="hidden" name="ledger_2" class="ledger-hidden-input">
+                                <div class="ledger-suggestion-box"
+                                     data-entry="2"
+                                     style="position:absolute; top:100%; left:0; right:0; background:#020617; border:1px solid rgba(75,85,99,0.9); max-height:180px; overflow-y:auto; z-index:50; display:none;">
+                                    {% for ledger in ledgers %}
+                                        <div class="ledger-item"
+                                             data-id="{{ ledger.id }}"
+                                             data-name="{{ ledger.name }}"
+                                             style="padding:4px 6px; cursor:pointer; font-size:13px; color:#e5e7eb;">
+                                            {{ ledger.name }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <!-- LEDGER COMBOBOX END -->
+
+                            <input type="text" name="dr_amount_2" class="dr-amount amount-input" placeholder="Dr" disabled>
+                            <input type="text" name="cr_amount_2" class="cr-amount amount-input" placeholder="Cr" disabled>
+                            <button type="button" class="txn-delete-entry">Delete</button>
+                        </div>
+                    </div>
+
+                    <button type="button" id="add-entry" class="txn-add-entry-btn" disabled>Add Entry</button>
+                </div>
+
+                <!-- Narration -->
+                <div class="txn-section-box">
+                    <p class="txn-section-title">Narration</p>
+                    <div class="txn-form-group">
+                        <label class="txn-required-label" for="id_narration">Narration</label>
+                        <textarea id="id_narration" name="narration" class="form-control"
+                                  style="width: 100%; min-height: 70px;" required></textarea>
+                    </div>
+                </div>
+
+                <!-- RECEIPT fields -->
+                <div id="receipt-fields" class="txn-section-box" style="display:none;">
+                    <p class="txn-section-title">Other Info (Receipt)</p>
+
+                    <div class="txn-form-group">
+                        <label class="txn-required-label" for="uc_applicable">UC Applicable?</label>
+                        <select id="uc_applicable" name="uc_applicable" class="form-control" style="width: 150px;" required>
+                            <option value="">Select</option>
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
+
+                    <div id="uc-details" style="display:none;">
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Major Head</label>
+                                <input type="text" name="major_head" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Treasury Code</label>
+                                <input type="text" name="treasury_code" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">UC/Bill No.</label>
+                                <input type="text" name="uc_bill_no" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Dated</label>
+                                <input type="date" name="uc_bill_date" style="width: 100%;">
+                            </div>
+                        </div>
+
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Sub Major Head</label>
+                                <input type="text" name="sub_major_head" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">DDO Code</label>
+                                <input type="text" name="ddo_code" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px;">
+                                <label class="txn-required-label">Letter No.</label>
+                                <input type="text" name="letter_no" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px%;">
+                                <label class="txn-required-label">Dated</label>
+                                <input type="date" name="letter_date" style="width: 100%;">
+                            </div>
+                        </div>
+
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <div class="txn-form-group" style="flex:1 1 200px%;">
+                                <label class="txn-required-label">Minor Head</label>
+                                <input type="text" name="minor_head" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px%;">
+                                <label class="txn-required-label">Bank Code</label>
+                                <input type="text" name="bank_code" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px%;">
+                                <label class="txn-required-label">TV No.</label>
+                                <input type="text" name="tv_no" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px%;">
+                                <label class="txn-required-label">Dated</label>
+                                <input type="date" name="tv_date" style="width: 100%;">
+                            </div>
+                        </div>
+
+                        <div style="display:flex; flex-wrap:wrap; gap:8px%;">
+                            <div class="txn-form-group" style="flex:1 1 200px%;">
+                                <label class="txn-required-label">Sub Head</label>
+                                <input type="text" name="sub_head" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px%;">
+                                <label class="txn-required-label">Bill Code</label>
+                                <input type="text" name="bill_code" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group" style="flex:1 1 200px%;">
+                                <label class="txn-required-label">Grant Amount</label>
+                                <input type="number" step="0.01" name="grant_amount" style="width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PAYMENT fields -->
+                <div id="payment-fields" class="txn-section-box" style="display:none;">
+                    <p class="txn-section-title">Other Info (Payment)</p>
+
+                    <div style="display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:8px;">
+                        <div class="txn-form-group">
+                            <label class="txn-required-label" for="vendor_name">Vendor Name</label>
+                            <input type="text" name="vendor_name" id="vendor_name" style="width: 100%;">
+                        </div>
+                        <div class="txn-form-group">
+                            <label class="txn-required-label" for="vendor_amount">Amount</label>
+                            <input type="number" step="0.01" name="vendor_amount" id="vendor_amount" style="width: 100%;">
+                        </div>
+                        <div class="txn-form-group">
+                            <label class="txn-required-label" for="cheque_no">Cheque No.</label>
+                            <input type="text" name="cheque_no" id="cheque_no" style="width: 100%;">
+                        </div>
+                    </div>
+
+                    <div class="txn-form-group" style="margin-top:4px;">
+                        <label class="txn-required-label" for="gst_applicable">GST Applicable?</label>
+                        <select id="gst_applicable" name="gst_applicable" class="form-control" style="width: 150px;">
+                            <option value="">Select</option>
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
+
+                    <div id="gst-details" style="display:none;">
+                        <div style="display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:8px;">
+                            <div class="txn-form-group">
+                                <label class="txn-required-label">GST No.</label>
+                                <input type="text" name="gst_no" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="gst_type">GST Type</label>
+                                <select id="gst_type" name="gst_type" style="width: 100%;">
+                                    <option value="">-- Select GST Type --</option>
+                                    <option value="inter">Inter State</option>
+                                    <option value="intra">Intra State</option>
+                                </select>
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="gst_rate">GST Rate</label>
+                                <select id="gst_rate" name="gst_rate" style="width: 100%;">
+                                    <option value="">-- Select Rate --</option>
+                                    <option value="2">2%</option>
+                                    <option value="5">5%</option>
+                                    <option value="12">12%</option>
+                                    <option value="18">18%</option>
+                                </select>
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="igst_amount">IGST</label>
+                                <input type="number" step="0.01" name="igst_amount" id="igst_amount" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="cgst_amount">CGST</label>
+                                <input type="number" step="0.01" name="cgst_amount" id="cgst_amount" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="sgst_amount">SGST</label>
+                                <input type="number" step="0.01" name="sgst_amount" id="sgst_amount" style="width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="txn-form-group" style="margin-top:4px;">
+                        <label class="txn-required-label" for="tds_applicable">TDS Applicable?</label>
+                        <select id="tds_applicable" name="tds_applicable" class="form-control" style="width: 150px;">
+                            <option value="">Select</option>
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
+
+                    <div id="tds-details" style="display:none;">
+                        <div style="display:grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap:8px;">
+                            <div class="txn-form-group">
+                                <label class="txn-required-label">PAN No.</label>
+                                <input type="text" name="tds_pan_no" style="width: 100%;">
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="tds_section">TDS Section</label>
+                                <select id="tds_section" name="tds_section" style="width: 100%;">
+                                    <option value="">Select Sec</option>
+                                    <option value="92">92</option>
+                                    <option value="94C">94C</option>
+                                    <option value="94J">94J</option>
+                                    <option value="94H">94H</option>
+                                </select>
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="tds_nature">Nature</label>
+                                <select id="tds_nature" name="tds_nature" style="width: 100%;">
+                                    <option value="">Nature</option>
+                                    <option value="salary">Salary</option>
+                                    <option value="contract">Contract</option>
+                                    <option value="professional">Professional</option>
+                                    <option value="commission">Commission</option>
+                                </select>
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="tds_type">Type</label>
+                                <select id="tds_type" name="tds_type" style="width: 100%;">
+                                    <option value="">Select Type</option>
+                                    <option value="individual">Individual-HUF</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="tds_rate">Rate</label>
+                                <select id="tds_rate" name="tds_rate" style="width: 100%;">
+                                    <option value="">Select Rate</option>
+                                    <option value="avg">Avg Rate</option>
+                                    <option value="1">1%</option>
+                                    <option value="2">2%</option>
+                                    <option value="10">10%</option>
+                                </select>
+                            </div>
+                            <div class="txn-form-group">
+                                <label class="txn-required-label" for="tds_amount">TDS Amount</label>
+                                <input type="number" step="0.01" name="tds_amount" id="tds_amount" style="width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="txn-form-actions">
+                <button type="submit" class="txn-btn-primary">
+                    Save Transaction
+                </button>
+            </div>
+        </div>
+    </form>
+    {% else %}
+        <p style="margin-top:8px; font-size:13px; color:#f87171;">
+            You do not have permission to enter transactions.
+        </p>
+    {% endif %}
+</div>
+
+<script>
+let entryCounter = 2;
+let lastTotalDr = 0;
+let lastTotalCr = 0;
+
+document.addEventListener('DOMContentLoaded', function () {
+    const voucherTypeEl = document.getElementById('id_voucher_type');
+    const voucherDateEl = document.getElementById('id_voucher_date');
+    const addEntryBtn = document.getElementById('add-entry');
+    const form = document.getElementById('transaction-form');
+    const ucApplicable = document.getElementById('uc_applicable');
+    const gstApplicable = document.getElementById('gst_applicable');
+    const gstTypeEl = document.getElementById('gst_type');
+    const tdsApplicable = document.getElementById('tds_applicable');
+    const tdsSectionEl = document.getElementById('tds_section');
+    const tdsTypeEl = document.getElementById('tds_type');
+
+    if (voucherTypeEl) {
+        voucherTypeEl.addEventListener('change', function () {
+            generateVoucherNo();
+            toggleVoucherFields();
+            toggleAccountingEnabled();
+        });
+    }
+
+    if (voucherDateEl) {
+        voucherDateEl.addEventListener('change', function () {
+            generateVoucherNo();
+        });
+    }
+
+    if (addEntryBtn) {
+        addEntryBtn.addEventListener('click', function () {
+            entryCounter++;
+            const container = document.getElementById('accounting-entries');
+            const newRow = document.createElement('div');
+            newRow.className = 'txn-entry-row';
+            newRow.dataset.entry = entryCounter;
+            newRow.innerHTML = `
+                <select name="type_${entryCounter}" class="type-select">
+                    <option value="Dr">Dr.</option>
+                    <option value="Cr">Cr.</option>
+                </select>
+
+                <div class="ledger-combo" data-entry="${entryCounter}" style="position:relative; width:100%;">
+                    <div style="display:flex; align-items:center; gap:4px;">
+                        <input type="text"
+                               name="ledger_search_${entryCounter}"
+                               class="ledger-search-input"
+                               placeholder="Type to search ledger"
+                               autocomplete="off"
+                               style="flex:1; padding:4px 6px; border-radius:6px; border:1px solid rgba(75,85,99,0.9); background:#020617; color:#e5e7eb; font-size:13px;">
+                    </div>
+                    <input type="hidden" name="ledger_${entryCounter}" class="ledger-hidden-input">
+
+                    <div class="ledger-suggestion-box"
+                         data-entry="${entryCounter}"
+                         style="position:absolute; top:100%; left:0; right:0; background:#020617; border:1px solid rgba(75,85,99,0.9); max-height:180px; overflow-y:auto; z-index:50; display:none;">
+                        {% for ledger in ledgers %}
+                            <div class="ledger-item"
+                                 data-id="{{ ledger.id }}"
+                                 data-name="{{ ledger.name }}"
+                                 style="padding:4px 6px; cursor:pointer; font-size:13px; color:#e5e7eb;">
+                                {{ ledger.name }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <input type="text" name="dr_amount_${entryCounter}" class="dr-amount amount-input" placeholder="Dr" disabled>
+                <input type="text" name="cr_amount_${entryCounter}" class="cr-amount amount-input" placeholder="Cr" disabled>
+                <button type="button" class="txn-delete-entry">Delete</button>
+            `;
+            container.appendChild(newRow);
+            setupRowEvents(newRow);
+            initLedgerCombosForRow(newRow);
+            refreshLedgerOptions();
+            recalcTotalsAndSetBaseline();
+        });
+    }
+
+    document.querySelectorAll('.txn-entry-row').forEach(row => {
+        setupRowEvents(row);
+    });
+
+    document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('txn-delete-entry')) {
+            const row = e.target.closest('.txn-entry-row');
+            if (row) {
+                row.remove();
+                refreshLedgerOptions();
+                recalcTotalsAndSetBaseline();
+            }
+        }
+    });
+
+    if (ucApplicable) {
+        ucApplicable.addEventListener('change', function () {
+            const ucDetails = document.getElementById('uc-details');
+            const ucFields = ucDetails.querySelectorAll('input');
+            if (this.value === 'yes') {
+                ucDetails.style.display = 'block';
+                ucFields.forEach(f => f.required = true);
+            } else {
+                ucDetails.style.display = 'none';
+                ucFields.forEach(f => {
+                    f.required = false;
+                    f.value = '';
+                });
+            }
+        });
+    }
+
+    if (gstApplicable) {
+        gstApplicable.addEventListener('change', function () {
+            const details = document.getElementById('gst-details');
+            const gstType = document.getElementById('gst_type');
+            const gstRate = document.getElementById('gst_rate');
+            const gstFields = details.querySelectorAll('input, select');
+            if (this.value === 'yes') {
+                details.style.display = 'block';
+                gstFields.forEach(f => f.required = true);
+                gstType.value = '';
+                gstRate.value = '';
+            } else {
+                details.style.display = 'none';
+                gstFields.forEach(f => {
+                    f.required = false;
+                    f.value = '';
+                });
+                document.getElementById('igst_amount').value = '';
+                document.getElementById('cgst_amount').value = '';
+                document.getElementById('sgst_amount').value = '';
+            }
+        });
+    }
+
+    if (gstTypeEl) {
+        gstTypeEl.addEventListener('change', function () {
+            const igst = document.getElementById('igst_amount');
+            const cgst = document.getElementById('cgst_amount');
+            const sgst = document.getElementById('sgst_amount');
+            if (this.value === 'inter') {
+                igst.disabled = false;
+                cgst.disabled = true;
+                sgst.disabled = true;
+                cgst.value = '';
+                sgst.value = '';
+            } else if (this.value === 'intra') {
+                igst.disabled = true;
+                cgst.disabled = false;
+                sgst.disabled = false;
+                igst.value = '';
+            } else {
+                igst.disabled = true;
+                cgst.disabled = true;
+                sgst.disabled = true;
+                igst.value = '';
+                cgst.value = '';
+                sgst.value = '';
+            }
+        });
+    }
+
+    if (tdsApplicable) {
+        tdsApplicable.addEventListener('change', function () {
+            const box = document.getElementById('tds-details');
+            const section = document.getElementById('tds_section');
+            const nature = document.getElementById('tds_nature');
+            const type = document.getElementById('tds_type');
+            const rate = document.getElementById('tds_rate');
+            const tdsAmt = document.getElementById('tds_amount');
+            const tdsFields = box.querySelectorAll('input, select');
+            if (this.value === 'yes') {
+                box.style.display = 'block';
+                section.value = '';
+                nature.value = '';
+                type.value = '';
+                rate.value = '';
+                tdsAmt.value = '';
+                nature.disabled = false;
+                type.disabled = false;
+                rate.disabled = false;
+                tdsAmt.disabled = false;
+                tdsFields.forEach(f => f.required = true);
+            } else {
+                box.style.display = 'none';
+                section.value = '';
+                nature.value = '';
+                type.value = '';
+                rate.value = '';
+                tdsAmt.value = '';
+                nature.disabled = false;
+                type.disabled = false;
+                rate.disabled = false;
+                tdsAmt.disabled = false;
+                tdsFields.forEach(f => {
+                    f.required = false;
+                    f.value = '';
+                });
+            }
+        });
+    }
+
+    if (tdsSectionEl) {
+        tdsSectionEl.addEventListener('change', function () {
+            const section = this.value;
+            const nature = document.getElementById('tds_nature');
+            const type = document.getElementById('tds_type');
+            const rate = document.getElementById('tds_rate');
+            nature.disabled = false;
+            type.disabled = false;
+            rate.disabled = false;
+            resetTdsRateOptionsVisible();
+            if (!section) {
+                nature.value = '';
+                type.value = '';
+                rate.value = '';
+                return;
+            }
+            if (section === '92') {
+                nature.value = 'salary';
+                nature.disabled = true;
+                type.value = '';
+                type.disabled = true;
+                rate.value = 'avg';
+                rate.disabled = true;
+            } else if (section === '94C') {
+                nature.value = 'contract';
+                nature.disabled = true;
+                type.disabled = false;
+                type.value = '';
+                Array.from(rate.options).forEach(opt => {
+                    if (!opt.value) {
+                        opt.hidden = false;
+                    } else if (opt.value === '1' || opt.value === '2') {
+                        opt.hidden = false;
+                    } else {
+                        opt.hidden = true;
+                    }
+                });
+                rate.value = '';
+                rate.disabled = false;
+            } else if (section === '94J') {
+                nature.value = 'professional';
+                nature.disabled = true;
+                type.value = '';
+                type.disabled = true;
+                resetTdsRateOptionsVisible();
+                rate.value = '10';
+                rate.disabled = true;
+            } else if (section === '94H') {
+                nature.value = 'commission';
+                nature.disabled = true;
+                type.value = '';
+                type.disabled = true;
+                resetTdsRateOptionsVisible();
+                rate.value = '10';
+                rate.disabled = true;
+            }
+        });
+    }
+
+    if (tdsTypeEl) {
+        tdsTypeEl.addEventListener('change', function () {
+            const section = document.getElementById('tds_section').value;
+            const rate = document.getElementById('tds_rate');
+            if (section === '94C') {
+                if (this.value === 'individual') {
+                    rate.value = '1';
+                    rate.disabled = true;
+                } else if (this.value === 'other') {
+                    rate.value = '2';
+                    rate.disabled = true;
+                } else {
+                    rate.value = '';
+                    rate.disabled = false;
+                }
+            }
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const container = document.getElementById('accounting-entries');
+            const rows = Array.from(container.querySelectorAll('.txn-entry-row'));
+
+            for (const row of rows) {
+                const typeSel = row.querySelector('.type-select');
+                const ledgerHidden = row.querySelector('.ledger-hidden-input');
+                const drInput = row.querySelector('.dr-amount');
+                const crInput = row.querySelector('.cr-amount');
+
+                const typeVal = (typeSel && typeSel.value) || '';
+                const ledgerVal = (ledgerHidden && ledgerHidden.value) || '';
+                const drVal = parseAmountRaw(drInput && drInput.value);
+                const crVal = parseAmountRaw(crInput && crInput.value);
+
+                const hasSomething = typeVal || ledgerVal || drVal !== 0 || crVal !== 0;
+
+                if (hasSomething) {
+                    if (!typeVal || !ledgerVal || (drVal === 0 && crVal === 0)) {
+                        alert('Every row that has any value must have Type, Ledger, and amount filled.');
+                        if (!typeVal && typeSel) {
+                            typeSel.focus();
+                        } else if (!ledgerVal && ledgerHidden) {
+                            const searchInput = row.querySelector('.ledger-search-input');
+                            if (searchInput) searchInput.focus();
+                        } else if (drVal === 0 && crVal === 0 && (drInput || crInput)) {
+                            (drInput || crInput).focus();
+                        }
+                        return;
+                    }
+                }
+            }
+
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                console.log('Form invalid, first invalid element:', form.querySelector(':invalid'));
+                return;
+            }
+
+            const ok = confirm('Are you sure you want to create this transaction?');
+            if (!ok) {
+                return;
+            }
+            const successBox = document.getElementById('txn-success-message');
+            if (successBox) {
+                successBox.style.display = 'block';
+                successBox.style.color = '#16a34a';
+                successBox.textContent = 'Transaction saved successfully.';
+                setTimeout(function () {
+                    successBox.style.display = 'none';
+                    form.submit();
+                }, 2000);
+            } else {
+                form.submit();
+            }
+            console.log('Form valid, submitting...');
+        });
+    }
+
+    initLedgerCombos();
+    toggleVoucherFields();
+    toggleAccountingEnabled();
+});
+
+// auto-hide Django success banner after 2 seconds
+document.addEventListener('DOMContentLoaded', function () {
+    var banner = document.getElementById('success_banner');
+    if (banner) {
+        setTimeout(function () {
+            banner.style.display = 'none';
+        }, 2000);
+    }
+});
+
+// ==== helper functions ====
+
+function generateVoucherNo() {
+    const typeCodeEl = document.getElementById('id_voucher_type');
+    const dateEl = document.getElementById('id_voucher_date');
+    const voucherInput = document.getElementById('id_voucher_no');
+    if (!typeCodeEl || !dateEl || !voucherInput) return;
+    const typeCode = typeCodeEl.value;
+    const date = dateEl.value;
+    if (!(typeCode && date)) {
+        voucherInput.value = '';
+        return;
+    }
+    voucherInput.value = 'Generating...';
+    fetch("{% url 'next_voucher_no' %}?voucher_type=" + encodeURIComponent(typeCode) + "&voucher_date=" + encodeURIComponent(date))
+        .then(response => response.json())
+        .then(data => {
+            if (data.voucher_no) {
+                voucherInput.value = data.voucher_no;
+            } else {
+                voucherInput.value = '';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching voucher number:', error);
+            voucherInput.value = '';
+        });
+}
+
+function toggleAccountingEnabled() {
+    const type = document.getElementById('id_voucher_type').value;
+    const accSection = document.getElementById('accounting-section');
+    const addBtn = document.getElementById('add-entry');
+    const allInputs = accSection.querySelectorAll('input, select, button.txn-delete-entry');
+    if (type) {
+        accSection.classList.remove('txn-section-disabled');
+        addBtn.disabled = false;
+        allInputs.forEach(el => {
+            if (el.classList.contains('amount-input')) return;
+            el.disabled = false;
+        });
+        document.querySelectorAll('.txn-entry-row').forEach(row => {
+            applyTypeToRow(row);
+        });
+        recalcTotalsAndSetBaseline();
+    } else {
+        accSection.classList.add('txn-section-disabled');
+        addBtn.disabled = true;
+        allInputs.forEach(el => {
+            el.disabled = true;
+        });
+    }
+}
+
+function toggleVoucherFields() {
+    const type = document.getElementById('id_voucher_type').value;
+    const receiptBox = document.getElementById('receipt-fields');
+    const paymentBox = document.getElementById('payment-fields');
+
+    if (!receiptBox || !paymentBox) {
+        return;
+    }
+
+    const receiptFields = receiptBox.querySelectorAll('input, select, textarea');
+    const paymentFields = paymentBox.querySelectorAll('input, select, textarea');
+
+    receiptBox.style.display = 'none';
+    paymentBox.style.display = 'none';
+
+    receiptFields.forEach(f => f.required = false);
+    paymentFields.forEach(f => f.required = false);
+
+    if (type === 'RECV') {
+        receiptBox.style.display = 'block';
+    } else if (type === 'PYMT') {
+        paymentBox.style.display = 'block';
+    }
+}
+
+function applyTypeToRow(row) {
+    const typeSelect = row.querySelector('.type-select');
+    const drInput = row.querySelector('.dr-amount');
+    const crInput = row.querySelector('.cr-amount');
+    if (!typeSelect || !drInput || !crInput) return;
+    if (typeSelect.value === 'Dr') {
+        drInput.disabled = false;
+        crInput.disabled = true;
+        crInput.value = '';
+    } else if (typeSelect.value === 'Cr') {
+        crInput.disabled = false;
+        drInput.disabled = true;
+        drInput.value = '';
+    } else {
+        drInput.disabled = true;
+        crInput.disabled = true;
+    }
+}
+
+function formatIndianCurrency(value) {
+    if (!value) return '';
+    let num = value.toString().replace(/[^0-9.]/g, '');
+    if (num === '') return '';
+    let parts = num.split('.');
+    let integerPart = parts[0];
+    let decimalPart = parts[1] || '';
+    decimalPart = decimalPart.substring(0, 2);
+    let lastThree = integerPart.slice(-3);
+    let otherNumbers = integerPart.slice(0, -3);
+    if (otherNumbers !== '') {
+        lastThree = ',' + lastThree;
+    }
+    let formatted = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree;
+    if (decimalPart.length > 0) {
+        formatted = formatted + '.' + decimalPart.padEnd(2, '0');
+    } else {
+        formatted = formatted + '.00';
+    }
+    return formatted;
+}
+
+function parseAmountRaw(value) {
+    if (!value) return 0;
+    const num = value.toString().replace(/[^0-9.]/g, '');
+    return num ? parseFloat(num) : 0;
+}
+
+function setupAmountFormatting(input) {
+    if (!input) return;
+    input.addEventListener('blur', function () {
+        if (this.disabled) return;
+        this.value = formatIndianCurrency(this.value);
+        handleAmountOrTypeChanged();
+    });
+    input.addEventListener('input', function () {
+        if (this.disabled) return;
+        this.value = this.value.replace(/[^0-9.]/g, '');
+    });
+}
+
+function getSelectedLedgerValues() {
+    const values = [];
+    document.querySelectorAll('.ledger-hidden-input').forEach(inp => {
+        if (inp.value) values.push(inp.value);
+    });
+    return values;
+}
+
+function refreshLedgerOptions() {
+    const selected = getSelectedLedgerValues();
+    document.querySelectorAll('.ledger-suggestion-box').forEach(box => {
+        const items = box.querySelectorAll('.ledger-item');
+        items.forEach(item => {
+            const id = item.getAttribute('data-id');
+            if (!id) return;
+            if (selected.includes(id)) {
+                item.style.display = 'none';
+            } else {
+                item.style.display = '';
+            }
+        });
+    });
+}
+
+function setupRowEvents(row) {
+    const typeSelect = row.querySelector('.type-select');
+    const drInput = row.querySelector('.dr-amount');
+    const crInput = row.querySelector('.cr-amount');
+    if (typeSelect) {
+        typeSelect.addEventListener('change', function () {
+            applyTypeToRow(row);
+            handleAmountOrTypeChanged();
+        });
+        applyTypeToRow(row);
+    }
+    if (drInput) setupAmountFormatting(drInput);
+    if (crInput) setupAmountFormatting(crInput);
+}
+
+function handleAmountOrTypeChanged() {
+    const container = document.getElementById('accounting-entries');
+    if (!container) return;
+    const rows = Array.from(container.querySelectorAll('.txn-entry-row'));
+    if (rows.length === 0) return;
+
+    if (rows.length >= 2) {
+        const row1 = rows[0];
+        const row2 = rows[1];
+
+        const row1Type = row1.querySelector('.type-select')?.value;
+        const row2TypeSelect = row2.querySelector('.type-select');
+        const row1Dr = parseAmountRaw(row1.querySelector('.dr-amount')?.value);
+        const row1Cr = parseAmountRaw(row1.querySelector('.cr-amount')?.value);
+
+        const row2Dr = parseAmountRaw(row2.querySelector('.dr-amount')?.value);
+        const row2Cr = parseAmountRaw(row2.querySelector('.cr-amount')?.value);
+
+        let row1Amt = 0;
+        if (row1Type === 'Dr') row1Amt = row1Dr;
+        else if (row1Type === 'Cr') row1Amt = row1Cr;
+
+        if (row1Amt > 0 && row2Dr === 0 && row2Cr === 0) {
+            if (row1Type === 'Dr') {
+                if (row2TypeSelect && !row2TypeSelect.value) {
+                    row2TypeSelect.value = 'Cr';
+                    applyTypeToRow(row2);
+                }
+                const crInput = row2.querySelector('.cr-amount');
+                if (crInput && !crInput.value) {
+                    crInput.value = formatIndianCurrency(row1Amt);
+                }
+            } else if (row1Type === 'Cr') {
+                if (row2TypeSelect && !row2TypeSelect.value) {
+                    row2TypeSelect.value = 'Dr';
+                    applyTypeToRow(row2);
+                }
+                const drInput = row2.querySelector('.dr-amount');
+                if (drInput && !drInput.value) {
+                    drInput.value = formatIndianCurrency(row1Amt);
+                }
+            }
+        }
+    }
+
+    ensureLastCrBalanceRow();
+    updateLastCrBalanceAmount();
+}
+
+function recalcTotalsAndSetBaseline() {
+    const totals = calculateTotals();
+    lastTotalDr = totals.totalDr;
+    lastTotalCr = totals.totalCr;
+}
+
+function calculateTotals(excludeLastBalanceRow = false) {
+    const container = document.getElementById('accounting-entries');
+    const rows = Array.from(container.querySelectorAll('.txn-entry-row'));
+    let totalDr = 0;
+    let totalCr = 0;
+
+    const effectiveRows = excludeLastBalanceRow && rows.length > 1
+        ? rows.slice(0, rows.length - 1)
+        : rows;
+
+    effectiveRows.forEach(r => {
+        const t = r.querySelector('.type-select')?.value;
+        const drI = r.querySelector('.dr-amount');
+        const crI = r.querySelector('.cr-amount');
+        const drVal = parseAmountRaw(drI?.value);
+        const crVal = parseAmountRaw(crI?.value);
+        if (t === 'Dr') {
+            totalDr += drVal;
+        } else if (t === 'Cr') {
+            totalCr += crVal;
+        }
+    });
+    return { totalDr, totalCr };
+}
+
+function ensureLastCrBalanceRow() {
+    const container = document.getElementById('accounting-entries');
+    if (!container) return;
+    let rows = Array.from(container.querySelectorAll('.txn-entry-row'));
+    if (rows.length < 2) return;
+
+    let lastRow = rows[rows.length - 1];
+    let lastTypeSelect = lastRow.querySelector('.type-select');
+
+    if (!lastTypeSelect || lastTypeSelect.value !== 'Cr') {
+        const lastCrInput = lastRow.querySelector('.cr-amount');
+        if (lastCrInput) lastCrInput.value = '';
+
+        entryCounter++;
+        const newRow = document.createElement('div');
+        newRow.className = 'txn-entry-row';
+        newRow.dataset.entry = entryCounter;
+        newRow.innerHTML = `
+            <select name="type_${entryCounter}" class="type-select">
+                <option value="Dr">Dr.</option>
+                <option value="Cr" selected>Cr.</option>
+            </select>
+
+            <div class="ledger-combo" data-entry="${entryCounter}" style="position:relative; width:100%;">
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <input type="text"
+                           name="ledger_search_${entryCounter}"
+                           class="ledger-search-input"
+                           placeholder="Type to search ledger"
+                           autocomplete="off"
+                           style="flex:1; padding:4px 6px; border-radius:6px; border:1px solid rgba(75,85,99,0.9); background:#020617; color:#e5e7eb; font-size:13px;">
+                </div>
+                <input type="hidden" name="ledger_${entryCounter}" class="ledger-hidden-input">
+
+                <div class="ledger-suggestion-box"
+                     data-entry="${entryCounter}"
+                     style="position:absolute; top:100%; left:0; right:0; background:#020617; border:1px solid rgba(75,85,99,0.9); max-height:180px; overflow-y:auto; z-index:50; display:none;">
+                    {% for ledger in ledgers %}
+                        <div class="ledger-item"
+                             data-id="{{ ledger.id }}"
+                             data-name="{{ ledger.name }}"
+                             style="padding:4px 6px; cursor:pointer; font-size:13px; color:#e5e7eb;">
+                            {{ ledger.name }}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <input type="text" name="dr_amount_${entryCounter}" class="dr-amount amount-input" placeholder="Dr">
+            <input type="text" name="cr_amount_${entryCounter}" class="cr-amount amount-input" placeholder="Cr">
+            <button type="button" class="txn-delete-entry">Delete</button>
+        `;
+        container.appendChild(newRow);
+        setupRowEvents(newRow);
+        initLedgerCombosForRow(newRow);
+    }
+}
+
+function updateLastCrBalanceAmount() {
+    const container = document.getElementById('accounting-entries');
+    if (!container) return;
+    const rows = Array.from(container.querySelectorAll('.txn-entry-row'));
+    if (rows.length < 2) return;
+
+    const lastRow = rows[rows.length - 1];
+    const lastTypeSelect = lastRow.querySelector('.type-select');
+    const lastDrInput = lastRow.querySelector('.dr-amount');
+    const lastCrInput = lastRow.querySelector('.cr-amount');
+    if (!lastTypeSelect || !lastDrInput || !lastCrInput) return;
+
+    const totals = calculateTotals(true);
+    const diff = totals.totalDr - totals.totalCr;
+
+    lastDrInput.value = '';
+    lastCrInput.value = '';
+
+    if (Math.abs(diff) < 0.01) {
+        return;
+    }
+
+    lastTypeSelect.value = 'Cr';
+    applyTypeToRow(lastRow);
+    lastCrInput.value = formatIndianCurrency(Math.abs(diff));
+}
+
+function resetTdsRateOptionsVisible() {
+    const rate = document.getElementById('tds_rate');
+    Array.from(rate.options).forEach(opt => {
+        opt.hidden = false;
+    });
+}
+
+// ========== LEDGER COMBOBOX LOGIC ==========
+
+function initLedgerCombos() {
+    document.querySelectorAll('.ledger-combo').forEach(combo => {
+        initLedgerCombosForRow(combo.closest('.txn-entry-row'));
+    });
+}
+
+function initLedgerCombosForRow(row) {
+    if (!row) return;
+    const combo = row.querySelector('.ledger-combo');
+    if (!combo) return;
+
+    const searchInput = combo.querySelector('.ledger-search-input');
+    const hiddenInput = combo.querySelector('.ledger-hidden-input');
+    const box = combo.querySelector('.ledger-suggestion-box');
+    if (!searchInput || !hiddenInput || !box) return;
+
+    function filterList() {
+        const q = searchInput.value.trim().toLowerCase();
+        box.style.display = 'block';
+        box.querySelectorAll('.ledger-item').forEach(item => {
+            const name = item.getAttribute('data-name').toLowerCase();
+            if (!q || name.includes(q)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    searchInput.addEventListener('input', function () {
+        hiddenInput.value = '';
+        filterList();
+    });
+
+    searchInput.addEventListener('focus', function () {
+        filterList();
+    });
+
+    searchInput.addEventListener('click', function () {
+        filterList();
+    });
+
+    box.addEventListener('click', function (e) {
+        const item = e.target.closest('.ledger-item');
+        if (!item) return;
+        const id = item.getAttribute('data-id');
+        const name = item.getAttribute('data-name');
+        hiddenInput.value = id;
+        searchInput.value = name;
+        box.style.display = 'none';
+        refreshLedgerOptions();
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!combo.contains(e.target)) {
+            box.style.display = 'none';
+        }
+    });
+}
+</script>
+
+{% endblock %}

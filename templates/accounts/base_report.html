@@ -1,0 +1,326 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Reports | Muni Dashboard{% endblock %}</title>
+    <style>
+        /* your existing CSS exactly as you pasted */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: radial-gradient(circle at top, #1d4ed8 0, #020617 45%, #000000 100%);
+            color: #e5e7eb;
+        }
+        .top-header {
+            width: 100%;
+            padding: 14px 28px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            background: linear-gradient(90deg, rgba(15,23,42,0.98), rgba(15,23,42,0.92));
+            box-shadow: 0 9px 30px rgba(0,0,0,0.7);
+            z-index: 10;
+            flex-shrink: 0;
+            column-gap: 16px;
+        }
+        .top-header-left { display: flex; align-items: center; gap: 12px; }
+        .top-logo img { height: 50px; width: auto; display: block; }
+        .top-title-wrap { display: flex; flex-direction: column; gap: 3px; }
+        .top-title { font-size: 16px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #f9fafb; }
+        .top-subtitle { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: #9ca3af; }
+        .top-header-center { text-align: center; }
+        .ulb-name-label {
+            font-size: 10px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #9ca3af;
+        }
+        .ulb-name-value {
+            margin-top: 3px;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #facc15;
+            text-decoration-line: underline;
+            text-decoration-style: double;
+            text-decoration-color: #facc15;
+        }
+        .top-header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #9ca3af;
+            position: relative;
+            justify-content: flex-end;
+        }
+        .user-dropdown { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+        .user-badge {
+            padding: 5px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(148,163,184,0.7);
+            background: rgba(15,23,42,0.85);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .user-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 10px rgba(34,197,94,0.9);
+        }
+        .user-name {
+            max-width: 160px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .user-caret { font-size: 10px; opacity: 0.8; }
+        .dropdown-menu {
+            position: absolute;
+            top: 120%;
+            right: 0;
+            min-width: 180px;
+            background: #020617;
+            border-radius: 10px;
+            border: 1px solid rgba(55,65,81,0.9);
+            box-shadow: 0 14px 35px rgba(0,0,0,0.9);
+            padding: 6px 0;
+            display: none;
+            z-index: 20;
+        }
+        .dropdown-menu.open { display: block; }
+        .dropdown-item {
+            display: block;
+            width: 100%;
+            padding: 8px 14px;
+            font-size: 10px;
+            color: #e5e7eb;
+            text-decoration: none;
+            background: transparent;
+            border: none;
+            text-align: center;
+            cursor: pointer;
+        }
+        .dropdown-item:hover { background: rgba(15,23,42,0.95); }
+        .app-layout {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 240px minmax(0, 1fr);
+            gap: 0;
+            padding: 0 24px 24px;
+            height: calc(100vh - 78px);
+            overflow: hidden;
+        }
+        .sidebar {
+            border-right: 1px solid rgba(55,65,81,0.9);
+            padding-top: 0;
+            padding-right: 16px;
+            display: flex;
+            margin-top: 0;
+            margin-bottom: 0;
+            overflow: hidden;
+        }
+        .sidebar-inner { margin-top: 10px; width: 100%; }
+        .sidebar-title {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: #f64905;
+            font-weight: bold;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        .sidebar-section { margin-bottom: 22px; }
+        .sidebar-link {
+            display: block;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #fbbf24;
+            font-weight: bold;
+            text-decoration: none;
+            border: 1px solid transparent;
+            background: transparent;
+            transition: all 0.18s ease;
+            text-align: center;
+        }
+        .sidebar-link:hover {
+            background: rgba(15,23,42,0.95);
+            border-color: rgba(148,163,184,0.8);
+        }
+        .sidebar-link.active {
+            background: linear-gradient(120deg, #0ea5e9, #22c55e);
+            color: #020617;
+            border-color: transparent;
+            box-shadow: 0 10px 20px rgba(14,165,233,0.6), 0 0 16px rgba(34,197,94,0.8);
+        }
+        .main {
+            padding-top: 18px;
+            padding-left: 20px;
+            min-height: 0;
+            flex: 1;
+            overflow: hidden;
+        }
+        .card {
+            background: rgba(15,23,42,0.9);
+            border-radius: 14px;
+            border: 1px solid rgba(55,65,81,0.9);
+            padding: 16px 18px;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+            height: 100%;
+            overflow: hidden;
+        }
+        @media (max-width: 900px) {
+            .app-layout {
+                grid-template-columns: minmax(0, 1fr);
+                padding: 0 16px 18px;
+                height: calc(100vh - 78px);
+            }
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid rgba(55,65,81,0.9);
+                margin-bottom: 12px;
+                padding-right: 0;
+            }
+            .main { padding-left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="top-header">
+    <div class="top-header-left">
+        <div class="top-logo">
+            <img src="{% static 'accounts/logo.png' %}" alt="Muni Logo">
+        </div>
+        <div class="top-title-wrap">
+            <div class="top-title">BIHAR MUNICIPAL ACCOUNTING</div>
+
+            {% if request.user.role == "ROOT_DEV" %}
+                <div class="top-subtitle">ROOT DEVELOPER DASHBOARD</div>
+            {% elif request.user.role == "DEV" %}
+                <div class="top-subtitle">DEVELOPER DASHBOARD</div>
+            {% elif request.user.role == "ADMIN" %}
+                <div class="top-subtitle">ADMIN DASHBOARD</div>
+            {% else %}
+                <div class="top-subtitle">USER DASHBOARD</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="top-header-center">
+        <div class="ulb-name-label">WELCOME TO</div>
+        <div class="ulb-name-value">
+            {{ current_ulb_name }}
+        </div>
+    </div>
+
+    <div class="top-header-right">
+        <div>
+            {% if request.user.role == "ROOT_DEV" %}
+                <div class="top-subtitle">ROOT DEVELOPER</div>
+            {% elif request.user.role == "DEV" %}
+                <div class="top-subtitle">DEVELOPER</div>
+            {% elif request.user.role == "ADMIN" %}
+                <div class="top-subtitle">ADMIN</div>
+            {% else %}
+                <div class="top-subtitle">USER</div>
+            {% endif %}
+        </div>
+        <div class="user-dropdown" id="userDropdown">
+            <div class="user-badge">
+                <span class="user-dot"></span>
+                <span class="user-name">{{ request.user.username }}</span>
+                <span class="user-caret">▾</span>
+            </div>
+            <div class="dropdown-menu" id="userMenu">
+                <a class="dropdown-item" href="{% url 'change_password' %}">Change Password</a>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item">Logout</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="app-layout">
+    <aside class="sidebar">
+        <div class="sidebar-inner">
+            <div class="sidebar-section">
+                <div class="sidebar-title">REPORTS MENU</div>
+
+                <a href="{% url 'base_accounts_dashboard' %}"
+                   class="sidebar-link">
+                    🡄 Accounting Menu
+                </a>
+
+                {% if 'MENU_REPORTS_15TH_FINANCE_COMMISSION' in allowed_codes %}
+                <a href="{% url 'fifteenth_finance_commission' %}"
+                   class="sidebar-link {% if active_report_section == '15fc' %}active{% endif %}">
+                    15th Finance Commission
+                </a>
+                {% endif %}
+
+                {% if 'MENU_REPORTS_6TH_FINANCE_COMMISSION' in allowed_codes %}
+                <a href="{% url 'sixth_finance_commission' %}"
+                   class="sidebar-link {% if active_report_section == '6fc' %}active{% endif %}">
+                    6th Finance Commission
+                </a>
+                {% endif %}
+
+                {# New Utilization Certificate menu item #}
+                {% if 'MENU_REPORTS_UTILIZATION_CERTIFICATE' in allowed_codes %}
+                <a href="{% url 'utilization_certificate' %}"
+                   class="sidebar-link {% if active_report_section == 'uc' %}active{% endif %}">
+                    Utilization Certificate (UC)
+                </a>
+                {% endif %}
+
+            </div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div id="page-content">
+            {% block report_content %}
+            <div class="card">
+                <h2 style="font-size:18px; margin-bottom:12px;">Reports</h2>
+                <p style="font-size:13px;">
+                    Choose a specific report from the menu.
+                </p>
+            </div>
+            {% endblock %}
+        </div>
+    </main>
+</div>
+
+<script>
+    const userDropdown = document.getElementById('userDropdown');
+    const userMenu = document.getElementById('userMenu');
+
+    if (userDropdown && userMenu) {
+        userDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userMenu.classList.toggle('open');
+        });
+
+        document.addEventListener('click', () => {
+            userMenu.classList.remove('open');
+        });
+    }
+</script>
+
+</body>
+</html>

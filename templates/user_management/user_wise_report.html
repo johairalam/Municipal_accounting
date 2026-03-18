@@ -1,0 +1,118 @@
+{% extends "dashboards/base_root_dashboard.html" %}
+
+{% block title %}User Wise Report | Muni Dashboard{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="font-size:18px; margin-bottom:12px;">User Wise Report</h2>
+
+    <!-- Search bar -->
+    <form method="get" style="margin-bottom: 10px; display:flex; gap:8px; align-items:center;">
+        <input
+            type="text"
+            name="q"
+            value="{{ q|default:'' }}"
+            placeholder="Search by username, role, mobile or email"
+            style="
+                width: 400px;
+                padding:4px 6px;
+                border-radius:6px;
+                border:1px solid #4b5563;
+                background:#020617;
+                color:#e5e7eb;
+                font-size:12px;
+            ">
+        <button
+            type="submit"
+            style="
+                padding:5px 10px;
+                border-radius:999px;
+                border:1px solid #4b5563;
+                background:rgb(5, 130, 87);
+                color:#e5e7eb;
+                font-size:11px;
+                cursor:pointer;
+            ">
+            Search
+        </button>
+    </form>
+
+    <table class="styled-table" style="text-align: left;">
+        <thead>
+            <tr>
+                <th>User Name</th>
+                <th>Role</th>
+                <th>Mobile Number</th>
+                <th>Email ID</th>
+                <th>ULB Name(s)</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in rows %}
+            {% with u=row.user ulbs=row.ulbs %}
+            <tr>
+                <td>{{ u.username }}</td>
+                <td>{{ u.role }}</td>
+                <td>{{ u.mobile_number|default:"-" }}</td>
+                <td>{{ u.email }}</td>
+
+                <td>
+                    {% if ulbs %}
+                        {% for ulb in ulbs %}
+                            <div>{{ ulb.ulb_name }}</div>
+                        {% endfor %}
+                    {% else %}
+                        <span style="color:#f97373; font-weight:bold;">
+                            not yet assigned
+                        </span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endwith %}
+        {% empty %}
+            <tr>
+                <td colspan="5" style="text-align:center; padding:8px;">
+                    No users found.
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+    .styled-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 13px;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #020617;
+        border: 1px solid #1f2937;
+    }
+    .styled-table thead {
+        background: linear-gradient(120deg, #0f172a, #111827);
+    }
+    .styled-table th,
+    .styled-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #1f2937;
+        border-right: 1px solid #1f2937;
+        vertical-align: top;
+    }
+    .styled-table th:first-child,
+    .styled-table td:first-child {
+        border-left: 1px solid #1f2937;
+    }
+    .styled-table tbody tr:nth-child(even) {
+        background-color: #020617;
+    }
+    .styled-table tbody tr:nth-child(odd) {
+        background-color: #020617;
+    }
+    .styled-table tbody tr:hover {
+        background-color: #0b1120;
+    }
+</style>
+{% endblock %}

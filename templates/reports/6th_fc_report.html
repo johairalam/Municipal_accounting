@@ -1,0 +1,623 @@
+{% extends "reports/base_6th_fc.html" %}
+{% load static %}
+
+{% block fc_content %}
+
+<div class="ie-page">
+  <h2 style="text-align:center; font-weight:bold; margin-top:-20px; color:#fa6150; margin-bottom:6px;">
+    6TH FC REPORT
+  </h2>
+
+  <div class="ie-filter-bar">
+    <form method="get" style="display:flex; align-items:center; gap:6px;">
+      <label>
+        Ledger:
+        <select name="ledger_id"
+                style="
+                    width:260px;
+                    padding:4px 8px;
+                    border-radius:4px;
+                    border:1px solid #4b5563;
+                    background:#020617;
+                    color:#e5e7eb;
+                    font-size:11px;
+                ">
+          <option value="">All</option>
+          {% for ledger in defined_ledgers %}
+            <option value="{{ ledger.id }}" {% if ledger_id == ledger.id %}selected{% endif %}>
+              {{ ledger.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <input type="hidden" name="from_date" value="{{ from_date }}">
+      <input type="hidden" name="to_date" value="{{ to_date }}">
+      <input type="hidden" name="q" value="{{ q }}">
+
+      <button type="submit">Apply</button>
+    </form>
+
+    <form method="get" style="display:flex; align-items:center; gap:6px;">
+      <label>
+        From:
+        <input type="date"
+               name="from_date"
+               value="{{ from_date }}"
+               min="{{ earliest_as_on }}">
+      </label>
+      <label>
+        To:
+        <input type="date"
+               name="to_date"
+               value="{{ to_date }}"
+               min="{{ earliest_as_on }}">
+      </label>
+
+      <input type="hidden" name="ledger_id" value="{{ ledger_id }}">
+      <input type="hidden" name="q" value="{{ q }}">
+
+      <button type="submit">Date</button>
+    </form>
+
+    <form method="get" style="display:flex; align-items:center; gap:6px;">
+      <label>
+        Amount/Voucher/Cheque:
+        <input type="text" name="q"
+               value="{{ q }}"
+               placeholder="Search..."
+               style="width:180px; font-size:11px;">
+      </label>
+
+      <input type="hidden" name="ledger_id" value="{{ ledger_id }}">
+      <input type="hidden" name="from_date" value="{{ from_date }}">
+      <input type="hidden" name="to_date" value="{{ to_date }}">
+
+      <button type="submit">Search</button>
+
+      <button type="submit" name="export" value="excel">
+        Export to Excel
+      </button>
+    </form>
+  </div>
+
+  <div class="ie-table-wrapper">
+    <table class="ie-table">
+      <colgroup>
+        {# Receipts: Date, Part., SWM, Others, Untied, Maint, General, Total = 8 #}
+        <col style="width: 6%;">
+        <col style="width: 16%;">
+        <col style="width: 8%;">
+        <col style="width: 8%;">
+        <col style="width: 8%;">
+        <col style="width: 8%;">
+        <col style="width: 8%;">
+        <col style="width: 8%;">
+
+        {# Payments: Date, Part., VNo, Chq, SWM, Others, Untied, Maint, General, Total = 10 #}
+        <col style="width: 6%;">
+        <col style="width: 16%;">
+        <col style="width: 6%;">
+        <col style="width: 6%;">
+        <col style="width: 7%;">
+        <col style="width: 7%;">
+        <col style="width: 7%;">
+        <col style="width: 7%;">
+        <col style="width: 7%;">
+        <col style="width: 7%;">
+      </colgroup>
+
+      <thead>
+        <tr>
+          <th colspan="8" style="text-align:center;">Receipts side</th>
+          <th colspan="10" style="text-align:center;">Payments side</th>
+        </tr>
+
+        <tr>
+          {# Receipts side #}
+          <th rowspan="3">Date</th>
+          <th rowspan="3">Particulars</th>
+
+          <th colspan="3">Development Fund 30%</th>
+
+          <th rowspan="3">Maint Fund 20%</th>
+          <th rowspan="3">Gen. Fund 50%</th>
+          <th rowspan="3">Total</th>
+
+          {# Payments side #}
+          <th rowspan="3">Date</th>
+          <th rowspan="3">Particulars</th>
+          <th rowspan="3">Voucher No.</th>
+          <th rowspan="3">Cheque No.</th>
+
+          <th colspan="3">Development Fund 30%</th>
+
+          <th rowspan="3">Maint Fund 20%</th>
+          <th rowspan="3">Gen. Fund 50%</th>
+          <th rowspan="3">Total</th>
+        </tr>
+
+        <tr>
+          {# Receipts Dev fund subheader #}
+          <th colspan="2">Tied Fund 60%</th>
+          <th rowspan="2">Untied Fund 40%</th>
+
+          {# Payments Dev fund subheader #}
+          <th colspan="2">Tied Fund 60%</th>
+          <th rowspan="2">Untied Fund 40%</th>
+        </tr>
+
+        <tr>
+          {# Receipts: SWM / Others #}
+          <th>SWM 44%</th>
+          <th>Others 16%</th>
+
+          {# Payments: SWM / Others #}
+          <th>SWM 44%</th>
+          <th>Others 16%</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {# Opening balance row #}
+        <tr>
+          <td class="ie-center">
+            {% if opening_as_on_date %}{{ opening_as_on_date|date:"d-m-Y" }}{% endif %}
+          </td>
+          <td>Opening Balance</td>
+
+          <td class="ie-num" data-raw-amount="{{ opening_dev_tied_swm }}">
+            {% if opening_dev_tied_swm %}{{ opening_dev_tied_swm }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ opening_dev_tied_others }}">
+            {% if opening_dev_tied_others %}{{ opening_dev_tied_others }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ opening_dev_untied }}">
+            {% if opening_dev_untied %}{{ opening_dev_untied }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ opening_maint }}">
+            {% if opening_maint %}{{ opening_maint }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ opening_general }}">
+            {% if opening_general %}{{ opening_general }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ opening_total }}">
+            {% if opening_total %}{{ opening_total }}{% endif %}
+          </td>
+
+          {# payments empty #}
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+
+        {% if rows %}
+          {% for row in rows %}
+            <tr>
+              {# Receipts side #}
+              <td class="ie-center">
+                {% if row.recv_date %}{{ row.recv_date|date:"d-m-Y" }}{% endif %}
+              </td>
+              <td>{{ row.recv_particulars }}</td>
+              <td class="ie-num" data-raw-amount="{{ row.recv_dev_tied_swm }}">
+                {% if row.recv_dev_tied_swm %}{{ row.recv_dev_tied_swm }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.recv_dev_tied_others }}">
+                {% if row.recv_dev_tied_others %}{{ row.recv_dev_tied_others }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.recv_dev_untied }}">
+                {% if row.recv_dev_untied %}{{ row.recv_dev_untied }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.recv_maint }}">
+                {% if row.recv_maint %}{{ row.recv_maint }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.recv_general }}">
+                {% if row.recv_general %}{{ row.recv_general }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.recv_total }}">
+                {% if row.recv_total %}{{ row.recv_total }}{% endif %}
+              </td>
+
+              {# Payments side #}
+              <td class="ie-center">
+                {% if row.pay_date %}{{ row.pay_date|date:"d-m-Y" }}{% endif %}
+              </td>
+              <td>{{ row.pay_particulars }}</td>
+              <td class="ie-center">{{ row.pay_voucher_no }}</td>
+              <td class="ie-center">{{ row.pay_cheque_no }}</td>
+              <td class="ie-num" data-raw-amount="{{ row.pay_dev_tied_swm }}">
+                {% if row.pay_dev_tied_swm %}{{ row.pay_dev_tied_swm }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.pay_dev_tied_others }}">
+                {% if row.pay_dev_tied_others %}{{ row.pay_dev_tied_others }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.pay_dev_untied }}">
+                {% if row.pay_dev_untied %}{{ row.pay_dev_untied }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.pay_maint }}">
+                {% if row.pay_maint %}{{ row.pay_maint }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.pay_general }}">
+                {% if row.pay_general %}{{ row.pay_general }}{% endif %}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.pay_total }}">
+                {% if row.pay_total %}{{ row.pay_total }}{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="18" style="text-align:center; color:#9ca3af;">
+              No data for selected criteria.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Footer totals #}
+  <div class="ie-footer-row">
+    <div class="ie-footer-left">
+      <table class="ie-footer-table">
+        <colgroup>
+          <col style="width: 6%;">
+          <col style="width: 16%;">
+          <col style="width: 8%;">
+          <col style="width: 8%;">
+          <col style="width: 8%;">
+          <col style="width: 8%;">
+          <col style="width: 8%;">
+          <col style="width: 8%;">
+        </colgroup>
+
+        <tr class="footer-heading">
+          <td colspan="2"></td>
+          <td class="ie-center">SWM 44%</td>
+          <td class="ie-center">Others 16%</td>
+          <td class="ie-center">Untied 40%</td>
+          <td class="ie-center">Maint 20%</td>
+          <td class="ie-center">General 50%</td>
+          <td class="ie-center">Total</td>
+        </tr>
+
+        <tr>
+          <td colspan="2" style="text-align:left;">Total Receipts</td>
+          <td class="ie-num" data-raw-amount="{{ recv_totals_dev_tied_swm }}">
+            {% if recv_totals_dev_tied_swm %}{{ recv_totals_dev_tied_swm }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ recv_totals_dev_tied_others }}">
+            {% if recv_totals_dev_tied_others %}{{ recv_totals_dev_tied_others }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ recv_totals_dev_untied }}">
+            {% if recv_totals_dev_untied %}{{ recv_totals_dev_untied }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ recv_totals_maint }}">
+            {% if recv_totals_maint %}{{ recv_totals_maint }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ recv_totals_general }}">
+            {% if recv_totals_general %}{{ recv_totals_general }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ total_receipts }}">
+            {% if total_receipts %}{{ total_receipts }}{% endif %}
+          </td>
+        </tr>
+
+        <tr>
+          <td colspan="2">&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+          <td>&nbsp;</td>
+        </tr>
+
+        <tr class="footer-grand">
+          <td colspan="2" style="text-align:left;">Grand Total</td>
+          <td class="ie-num" data-raw-amount="{{ grand_recv_dev_tied_swm }}">
+            {% if grand_recv_dev_tied_swm %}{{ grand_recv_dev_tied_swm }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ grand_recv_dev_tied_others }}">
+            {% if grand_recv_dev_tied_others %}{{ grand_recv_dev_tied_others }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ grand_recv_dev_untied }}">
+            {% if grand_recv_dev_untied %}{{ grand_recv_dev_untied }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ grand_recv_maint }}">
+            {% if grand_recv_maint %}{{ grand_recv_maint }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ grand_recv_general }}">
+            {% if grand_recv_general %}{{ grand_recv_general }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ grand_total_left }}">
+            {% if grand_total_left %}{{ grand_total_left }}{% endif %}
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="ie-footer-right">
+      <table class="ie-footer-table">
+        <colgroup>
+          <col style="width: 6%;">
+          <col style="width: 16%;">
+          <col style="width: 6%;">
+          <col style="width: 6%;">
+          <col style="width: 7%;">
+          <col style="width: 7%;">
+          <col style="width: 7%;">
+          <col style="width: 7%;">
+          <col style="width: 7%;">
+          <col style="width: 7%;">
+        </colgroup>
+
+        <tr class="footer-heading">
+          <td colspan="4"></td>
+          <td class="ie-center">SWM 44%</td>
+          <td class="ie-center">Others 16%</td>
+          <td class="ie-center">Untied 40%</td>
+          <td class="ie-center">Maint 20%</td>
+          <td class="ie-center">General 50%</td>
+          <td class="ie-center">Total</td>
+        </tr>
+
+        <tr>
+          <td colspan="4" style="text-align:left;">Total Payment</td>
+          <td class="ie-num" data-raw-amount="{{ pay_totals_dev_tied_swm }}">
+            {% if pay_totals_dev_tied_swm %}{{ pay_totals_dev_tied_swm }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ pay_totals_dev_tied_others }}">
+            {% if pay_totals_dev_tied_others %}{{ pay_totals_dev_tied_others }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ pay_totals_dev_untied }}">
+            {% if pay_totals_dev_untied %}{{ pay_totals_dev_untied }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ pay_totals_maint }}">
+            {% if pay_totals_maint %}{{ pay_totals_maint }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ pay_totals_general }}">
+            {% if pay_totals_general %}{{ pay_totals_general }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ total_payments }}">
+            {% if total_payments %}{{ total_payments }}{% endif %}
+          </td>
+        </tr>
+
+        <tr>
+          <td colspan="4" style="text-align:left;">Closing Balance</td>
+          <td class="ie-num" data-raw-amount="{{ closing_dev_tied_swm }}">
+            {% if closing_dev_tied_swm %}{{ closing_dev_tied_swm }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ closing_dev_tied_others }}">
+            {% if closing_dev_tied_others %}{{ closing_dev_tied_others }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ closing_dev_untied }}">
+            {% if closing_dev_untied %}{{ closing_dev_untied }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ closing_maint }}">
+            {% if closing_maint %}{{ closing_maint }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ closing_general }}">
+            {% if closing_general %}{{ closing_general }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ closing_balance }}">
+            {% if closing_balance %}{{ closing_balance }}{% endif %}
+          </td>
+        </tr>
+
+        <tr class="footer-grand">
+          <td colspan="4" style="text-align:left;">Grand Total</td>
+          <td class="ie-num" data-raw-amount="{{ grand_pay_dev_tied_swm }}">
+            {% if grand_pay_dev_tied_swm %}{{ grand_pay_dev_tied_swm }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ grand_pay_dev_tied_others }}">
+            {% if grand_pay_dev_tied_others %}{{ grand_pay_dev_tied_others }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ grand_pay_dev_untied }}">
+            {% if grand_pay_dev_untied %}{{ grand_pay_dev_untied }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ grand_pay_maint }}">
+            {% if grand_pay_maint %}{{ grand_pay_maint }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ grand_pay_general }}">
+            {% if grand_pay_general %}{{ grand_pay_general }}{% endif %}
+          </td>
+          <td class="ie-num" data-raw-amount="{{ grand_total_right }}">
+            {% if grand_total_right %}{{ grand_total_right }}{% endif %}
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<style>
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.ie-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(85vh - 60px);
+  padding: 8px 16px 16px 16px;
+  box-sizing: border-box;
+  margin-left: -30px;
+  margin-right: -20px;
+}
+
+.ie-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 8px; /* smaller text */
+  color: #c17306;
+}
+
+/* prevent wrapping in main table */
+.ie-table th,
+.ie-table td {
+  border-top: 1px solid #0266f1;
+  border-bottom: 1px solid #0350f6;
+  padding: 2px 3px;
+  white-space: nowrap; /* no wrap */
+}
+
+.ie-filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #e5e7eb;
+}
+
+.ie-filter-bar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ie-filter-bar input[type="date"],
+.ie-filter-bar input[type="text"],
+.ie-filter-bar select {
+  padding: 4px 8px;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  font-size: 11px;
+  background-color: #020617;
+  color: #e5e7eb;
+}
+
+.ie-filter-bar button {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid #288cfa;
+  background: linear-gradient(90deg, #288cfa, #22c55e);
+  color: #020617;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(40,140,250,0.6);
+}
+
+.ie-table-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto; /* allow horizontal scroll if needed */
+  background: radial-gradient(circle at top left, #0b1220, #020617);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.9);
+  border: 1px solid #37371f;
+  display: flex;
+  flex-direction: column;
+}
+
+.ie-table thead th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(90deg, #0b1120, #1d4ed8);
+  z-index: 2;
+  font-weight: 500;
+  font-size: 8px; /* smaller header */
+  color: #f9fafb;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+.ie-table tbody td.ie-center {
+  text-align: center;
+}
+
+.ie-table tbody tr:hover td {
+  background-color: rgba(104,157,244,0.197);
+  box-shadow: inset 0 0 0 9999px rgba(59,130,246,0.08);
+}
+
+.ie-table tbody tr {
+  cursor: default;
+}
+
+.ie-num {
+  text-align: right;
+  white-space: nowrap;
+  min-height: 14px;
+  color: #f58d06;
+}
+
+.ie-footer-row {
+  margin-top: 2px;
+  display: flex;
+  justify-content: space-between;
+  gap: 3px;
+  margin-bottom: -10px;
+}
+
+.ie-footer-left {
+  width: 47%;
+}
+.ie-footer-right {
+  width: 53%;
+}
+
+.ie-footer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8px; /* smaller footer text */
+  color: #e5e7eb;
+}
+
+/* prevent wrapping in footer tables */
+.ie-footer-table td {
+  border: 1px solid #4b5563;
+  padding: 3px 4px;
+  vertical-align: middle;
+  white-space: nowrap; /* no wrap */
+}
+
+.ie-footer-table .footer-heading td {
+  background:#111827;
+  font-weight:bold;
+}
+
+.ie-footer-table .footer-grand td {
+  background:#020617;
+  font-weight:bold;
+}
+
+.ie-footer-table .ie-num {
+  text-align: right;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.ie-num[data-raw-amount]').forEach(function (cell) {
+    const raw = cell.getAttribute('data-raw-amount');
+    if (!raw) return;
+    const n = Number(raw);
+    if (isNaN(n) || n === 0) {
+      cell.textContent = "";
+      return;
+    }
+    cell.textContent = n.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  });
+});
+</script>
+
+{% endblock %}

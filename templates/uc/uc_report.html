@@ -1,0 +1,369 @@
+{# templates/uc/uc_report.html #}
+{% extends "uc/base_uc.html" %}
+
+{% block title %}UC Reports | Muni Dashboard{% endblock %}
+{% block report_header_title %}UC Reports{% endblock %}
+
+{% block uc_content %}
+
+<div class="ie-page">
+  <h2 style="text-align:center; font-weight:bold; margin-top:0; color:#60a5fa; margin-bottom:6px;">
+    UC Reports
+  </h2>
+
+  {# FILTER BAR: each filter has its own form + button #}
+  <div class="ie-filter-bar"
+       style="display:flex; flex-wrap:nowrap; gap:10px; align-items:center; overflow-x:auto; margin-bottom:10px;">
+
+    {# Date range filter #}
+    <form method="get" style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
+      <label style="font-size:12px; color:#e5e7eb;">
+        From:
+        <input type="date" name="from_date" value="{{ from_date }}"
+               style="margin-left:4px; padding:3px 6px; font-size:11px;
+                      background-color:#020617; color:#e5e7eb;
+                      border:1px solid rgba(148,163,184,0.8); border-radius:3px;">
+      </label>
+      <label style="font-size:12px; color:#e5e7eb;">
+        To:
+        <input type="date" name="to_date" value="{{ to_date }}"
+               style="margin-left:4px; padding:3px 6px; font-size:11px;
+                      background-color:#020617; color:#e5e7eb;
+                      border:1px solid rgba(148,163,184,0.8); border-radius:3px;">
+      </label>
+      <input type="hidden" name="ledger_q" value="{{ ledger_q }}">
+      <input type="hidden" name="uc_q" value="{{ uc_q }}">
+      <input type="hidden" name="amount_q" value="{{ amount_q }}">
+      <button type="submit"
+              style="padding:4px 10px;font-size:11px;border-radius:4px;border:1px solid #288cfa;background:#020617;color:#e5e7eb;cursor:pointer;">
+        Date
+      </button>
+    </form>
+
+    {# Ledger filter #}
+    <form method="get" style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
+      <label style="font-size:12px; color:#e5e7eb;">
+        Ledger:
+        <input type="text" name="ledger_q" value="{{ ledger_q }}" placeholder="Ledger name / code"
+               style="margin-left:4px; width:180px; padding:3px 6px; font-size:11px;
+                      background-color:#020617; color:#e5e7eb;
+                      border:1px solid rgba(148,163,184,0.8); border-radius:3px;">
+      </label>
+      <input type="hidden" name="from_date" value="{{ from_date }}">
+      <input type="hidden" name="to_date" value="{{ to_date }}">
+      <input type="hidden" name="uc_q" value="{{ uc_q }}">
+      <input type="hidden" name="amount_q" value="{{ amount_q }}">
+      <button type="submit"
+              style="padding:4px 10px;font-size:11px;border-radius:4px;border:1px solid #22c55e;background:#020617;color:#bbf7d0;cursor:pointer;">
+        Search
+      </button>
+    </form>
+
+    {# UC ID filter #}
+    <form method="get" style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
+      <label style="font-size:12px; color:#e5e7eb;">
+        UC ID:
+        <input type="text" name="uc_q" value="{{ uc_q }}" placeholder="UC id / letter / voucher"
+               style="margin-left:4px; width:160px; padding:3px 6px; font-size:11px;
+                      background-color:#020617; color:#e5e7eb;
+                      border:1px solid rgba(148,163,184,0.8); border-radius:3px;">
+      </label>
+      <input type="hidden" name="from_date" value="{{ from_date }}">
+      <input type="hidden" name="to_date" value="{{ to_date }}">
+      <input type="hidden" name="ledger_q" value="{{ ledger_q }}">
+      <input type="hidden" name="amount_q" value="{{ amount_q }}">
+      <button type="submit"
+              style="padding:4px 10px;font-size:11px;border-radius:4px;border:1px solid #f97316;background:#020617;color:#fed7aa;cursor:pointer;">
+        Search
+      </button>
+    </form>
+
+    {# Amount filter #}
+    <form method="get" style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
+      <label style="font-size:12px; color:#e5e7eb;">
+        Amount:
+        <input type="text" name="amount_q" value="{{ amount_q }}" placeholder="Amount"
+               style="margin-left:4px; width:120px; padding:3px 6px; font-size:11px;
+                      background-color:#020617; color:#e5e7eb;
+                      border:1px solid rgba(148,163,184,0.8); border-radius:3px;">
+      </label>
+      <input type="hidden" name="from_date" value="{{ from_date }}">
+      <input type="hidden" name="to_date" value="{{ to_date }}">
+      <input type="hidden" name="ledger_q" value="{{ ledger_q }}">
+      <input type="hidden" name="uc_q" value="{{ uc_q }}">
+      <button type="submit"
+              style="padding:4px 10px;font-size:11px;border-radius:4px;border:1px solid #e5e7eb;background:#020617;color:#e5e7eb;cursor:pointer;">
+        Search
+      </button>
+    </form>
+
+  </div>
+
+  <div class="ie-table-wrapper">
+    <table class="ie-table">
+      <thead>
+        <tr>
+          <th>UC Date</th>
+          <th>UC ID</th>
+          <th>Ledger</th>
+          <th>Unutilized Grant</th>
+          <th>Total Payment</th>
+          <th>Balance</th>
+          <th>Action</th>
+          <th>Print</th>
+          <th>Open</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if uc_reports %}
+          {% for row in uc_reports %}
+            {# data-uc-group groups same UC, data-row-id is version (row.id) #}
+            <tr data-uc-group="{{ row.uc_id }}" data-row-id="{{ row.id }}">
+              <td class="ie-center">
+                {% if row.uc_date %}{{ row.uc_date|date:"d-m-Y" }}{% endif %}
+              </td>
+              <td class="ie-center">
+                {{ row.uc_id }}
+              </td>
+              <td>
+                {{ row.ledger_name }}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.unutilized_grant }}">
+                {{ row.unutilized_grant }}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.total_payment }}">
+                {{ row.total_payment }}
+              </td>
+              <td class="ie-num" data-raw-amount="{{ row.balance }}">
+                {{ row.balance }}
+              </td>
+
+              {# ACTION: Open (undo current utilization so user can prepare again) #}
+              <td class="ie-center" style="font-size:11px;">
+                {% if 'BTN_UC_OPEN_LAST' in allowed_codes %}
+                  <form method="post" action="{% url 'uc_undo_last' row.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="uc-open-btn"
+                            onclick="return confirm('Open this UC (undo last save) so you can prepare again?');"
+                            style="padding:3px 8px;font-size:11px;border-radius:8px;
+                                   border:1px solid #f97316;background:#020617;color:#f97316;cursor:pointer;">
+                      Open
+                    </button>
+                  </form>
+                {% endif %}
+              </td>
+
+              {# PRINT: Excel export, styled like a small button #}
+              <td class="ie-center" style="font-size:11px;">
+                {% if 'BTN_UC_EXPORT_EXCEL' in allowed_codes %}
+                  <a href="{% url 'uc_report_export_excel' row.id %}"
+                     style="display:inline-block;padding:3px 8px;border-radius:8px;
+                            font-size:11px;border:1px solid #facc15;
+                            background:#facc15;color:#1f2937;
+                            text-decoration:none;">
+                    Excel
+                  </a>
+                {% endif %}
+              </td>
+
+              {# OPEN: Forms, boxed with vertical buttons #}
+              <td class="ie-center" style="font-size:11px;">
+                {% if 'BTN_UC_OPEN_FORMS' in allowed_codes %}
+                  <div style="
+                      display:inline-flex;
+                      flex-direction:column;
+                      gap:4px;
+                      padding:4px 6px;
+                      border-radius:8px;
+                      border:1px solid #4b5563;
+                      background:#020617;
+                    ">
+                    <a href="{% url 'uc_btc42a_form' %}?uc_id={{ row.receipt_uc_id }}"
+                       style="display:block;padding:3px 8px;border-radius:8px;font-size:11px;
+                              border:1px solid #38bdf8;background:#020617;color:#38bdf8;
+                              text-decoration:none;text-align:center;">
+                      BTC FORM-42A
+                    </a>
+                    <a href="{% url 'utilization_certificate' %}?tab=annexure_a&uc_id={{ row.receipt_uc_id }}"
+                       style="display:block;padding:3px 8px;border-radius:8px;font-size:11px;
+                              border:1px solid #a855f7;background:#020617;color:#a855f7;
+                              text-decoration:none;text-align:center%;">
+                      ANNEXURE-A
+                    </a>
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="9" style="text-align:center; color:#9ca3af; padding:10px;">
+              No UC reports found for the selected filters.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .ie-page {
+    display: flex;
+    flex-direction: column;
+    height: calc(83vh - 25px);
+    padding: 0px 16px 16px 16px;
+    box-sizing: border-box;
+    margin-left: -16px;
+    margin-right: 0px;
+    margin-top: -10px;
+    overflow-x: hidden;
+  }
+
+  .ie-table-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    background: radial-gradient(circle at top left, #0b1220, #020617);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.9);
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  .ie-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+    font-size: 11px;
+    color: #f29b04;
+  }
+
+  .ie-table th,
+  .ie-table td {
+    border-top: 1px solid #0266f1;
+    border-bottom: 1px solid #0350f6;
+    padding: 5px 7px;
+  }
+
+  .ie-table thead th {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(90deg, #0b1120, #1d4ed8);
+    z-index: 2;
+    font-weight: 500;
+    font-size: 10px;
+    color: #f9fafb;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: center;
+  }
+
+  .ie-table tbody td.ie-center {
+    text-align: center;
+  }
+
+  .ie-table tbody tr:hover td {
+    background-color: rgba(104, 157, 244, 0.197);
+    box-shadow: inset 0 0 0 9999px rgba(59,130,246,0.08);
+  }
+
+  .ie-table tbody tr {
+    cursor: default;
+  }
+
+  .ie-num {
+    text-align: right;
+    white-space: nowrap;
+    min-height: 16px;
+    color: #f58d06;
+  }
+
+  .ie-table td:nth-child(3),
+  .ie-table th:nth-child(3) {
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+  }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  function formatINR(n) {
+    return n.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  // 1) Indian formatting
+  document.querySelectorAll('.ie-num[data-raw-amount]').forEach(function (cell) {
+    const raw = cell.getAttribute('data-raw-amount');
+    if (!raw) return;
+    const n = Number(String(raw).replace(/,/g, ''));
+    if (isNaN(n)) return;
+    cell.textContent = formatINR(n);
+  });
+
+  // 2) Enable Open only for latest UC per uc_id using row.id
+  const rows = Array.from(document.querySelectorAll('tr[data-uc-group][data-row-id]'));
+  if (!rows.length) return;
+
+  const groups = {};
+  rows.forEach(function (row) {
+    const group = row.getAttribute('data-uc-group');
+    if (!group) return;
+    if (!groups[group]) groups[group] = [];
+    groups[group].push(row);
+  });
+
+  // First enable all Open buttons by default
+  rows.forEach(function (row) {
+    const btn = row.querySelector('button.uc-open-btn');
+    if (!btn) return;
+    btn.disabled = false;
+    btn.style.opacity = 1;
+    btn.style.cursor = 'pointer';
+  });
+
+  // For each group that has more than one row, keep only the highest id enabled
+  Object.keys(groups).forEach(function (group) {
+    const groupRows = groups[group];
+    if (groupRows.length <= 1) {
+      return;
+    }
+
+    let latestRow = null;
+    let maxId = -Infinity;
+
+    groupRows.forEach(function (row) {
+      const idRaw = row.getAttribute('data-row-id');
+      const idNum = Number(idRaw);
+      if (!isNaN(idNum) && idNum > maxId) {
+        maxId = idNum;
+        latestRow = row;
+      }
+    });
+
+    // Disable all in this group
+    groupRows.forEach(function (row) {
+      const btn = row.querySelector('button.uc-open-btn');
+      if (!btn) return;
+      btn.disabled = true;
+      btn.style.opacity = 0.5;
+      btn.style.cursor = 'not-allowed';
+    });
+
+    // Enable only row having max id
+    if (latestRow) {
+      const latestBtn = latestRow.querySelector('button.uc-open-btn');
+      if (latestBtn) {
+        latestBtn.disabled = false;
+        latestBtn.style.opacity = 1;
+        latestBtn.style.cursor = 'pointer';
+      }
+    }
+  });
+});
+</script>
+
+{% endblock %}

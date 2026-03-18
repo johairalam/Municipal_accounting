@@ -1,0 +1,52 @@
+{% extends "dashboards/base_root_dashboard.html" %}
+
+{% block title %}Open ULB | Muni Dashboard{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="font-size:18px; margin-bottom:12px;">Open ULB</h2>
+
+    {% if ulb_list %}
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-grid ms-5" style="margin-left: 100px;">
+
+                <div class="form-group"
+                     style="
+                        max-width: 600px;
+                        display: flex;
+                        align-items: flex-end;
+                        gap: 10px;
+                     ">
+                    <div style="flex: 1;">
+                        <label class="required-label" for="id_ulb_select">ULB Name</label>
+                        <select id="id_ulb_select" name="selected_ulb_id"
+                                class="form-control"
+                                style="max-width: 400px; width: 100%;"
+                                required>
+                            <option value="">-- Select ULB --</option>
+                            {% for ulb in ulb_list %}
+                                <option value="{{ ulb.id }}"
+                                        {% if current_ulb and current_ulb.id == ulb.id %}selected{% endif %}>
+                                    {{ ulb.ulb_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <button type="submit"
+                                class="btn btn-primary px-4"
+                                style="margin-bottom: 2px;">
+                            Open ULB
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </form>
+    {% else %}
+        <p>No ULBs found.</p>
+    {% endif %}
+</div>
+{% endblock %}

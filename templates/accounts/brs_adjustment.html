@@ -1,0 +1,804 @@
+{% extends "accounts/base_brs.html" %}
+{% load static %}
+{% load humanize %}
+
+
+{% block brs_title %}BRS Adjustment{% endblock %}
+
+
+{% block brs_content %}
+  <!-- 1) Ledger + Type on single row -->
+  <form method="get" id="brs-ledger-type-filter" class="cb-filter-bar">
+    <div class="cb-filter-row brs-top-filter-row">
+      <label class="brs-top-filter-item">
+        <span class="brs-top-label">Ledger</span>
+        <select name="ledger_id" id="ledger_id" class="cb-select cb-input" required>
+          <option value="">-- Select bank ledger (450...) --</option>
+          {% for ledger in ledgers %}
+            <option value="{{ ledger.id }}"
+                    {% if request.GET.ledger_id == ledger.id|stringformat:"s" %}selected{% endif %}>
+              {{ ledger.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="brs-top-filter-item">
+        <span class="brs-top-label">Type</span>
+        <select name="entry_type" id="entry_type" class="cb-select cb-input" required>
+          <option value="">-- Select --</option>
+          <option value="receipts" {% if request.GET.entry_type == "receipts" %}selected{% endif %}>Receipts</option>
+          <option value="payments" {% if request.GET.entry_type == "payments" %}selected{% endif %}>Payments</option>
+        </select>
+      </label>
+
+      <div class="brs-top-filter-item brs-top-filter-actions">
+        <button type="submit" class="cb-btn-primary">Search</button>
+      </div>
+    </div>
+  </form>
+
+  {% if selected_ledger and request.GET.entry_type %}
+  <form method="post" id="brs-adjust-form" class="brs-page">
+    {% csrf_token %}
+    <input type="hidden" name="ledger_id" value="{{ selected_ledger.id }}">
+    <input type="hidden" name="entry_type" value="{{ request.GET.entry_type }}">
+
+    <!-- scrollable content area; button bar stays visible -->
+    <div class="brs-content-area">
+      <div class="brs-grid">
+        <!-- LEFT COLUMN: Cash Book Table -->
+        <div class="brs-left-col">
+          <div class="brs-box">
+            <!-- Header + search on same row -->
+            <div class="brs-box-header-row">
+              <div class="brs-box-header">
+                <span>Cash Book</span>
+                <span class="brs-box-subtitle">
+                  Bank ledger entries
+                </span>
+              </div>
+
+              <div class="brs-header-filters">
+                <label class="brs-header-filter-item">
+                  Amount search:
+                  <input type="text" id="cash_amount_filter" class="cb-input" placeholder="Search amount">
+                </label>
+                <label class="brs-header-filter-item">
+                  Cheque search:
+                  <input type="text" id="cash_cheque_filter" class="cb-input" placeholder="Search cheque no.">
+                </label>
+              </div>
+            </div>
+
+            <div class="brs-box-body brs-scroll-body">
+              <table class="cb-table" id="cash-box">
+                <thead>
+                  <tr>
+                    <th class="cb-center cb-col-date">Date</th>
+                    <th class="cb-center cb-col-type">Type</th>
+                    <th class="cb-center cb-col-cheque">Cheque No.</th>
+                    <th class="cb-center cb-col-narration">Cash Book Narration</th>
+                    <th class="cb-right cb-col-amount">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in cash_entries_all %}
+                    {% if row.dr_amount %}
+                      {% with amt=row.dr_amount type_label="receipts" sign="dr" %}
+                        {% if type_label == request.GET.entry_type %}
+                        <tr class="brs-row"
+                            data-source="cash"
+                            data-id="{{ row.id }}"
+                            data-amount="{{ amt }}"
+                            data-sign="{{ sign }}"
+                            data-type="{{ type_label }}"
+                            data-cheque="{{ row.cheque_number|default_if_none:''|upper }}">
+                          <td class="cb-center">
+                            {{ row.transaction.voucher_date|date:"d-m-Y" }}
+                          </td>
+                          <td class="cb-center">
+                            Dr
+                          </td>
+                          <td class="cb-center">
+                            {{ row.cheque_number|default_if_none:"-" }}
+                          </td>
+                          <td class="cb-narration-cell">
+                            {{ row.transaction.narration|default:"-" }}
+                          </td>
+                          <td class="cb-right">
+                            {{ amt|floatformat:2 }}
+                          </td>
+                        </tr>
+                        {% endif %}
+                      {% endwith %}
+                    {% else %}
+                      {% with amt=row.cr_amount type_label="payments" sign="cr" %}
+                        {% if type_label == request.GET.entry_type %}
+                        <tr class="brs-row"
+                            data-source="cash"
+                            data-id="{{ row.id }}"
+                            data-amount="{{ amt }}"
+                            data-sign="{{ sign }}"
+                            data-type="{{ type_label }}"
+                            data-cheque="{{ row.cheque_number|default_if_none:''|upper }}">
+                          <td class="cb-center">
+                            {{ row.transaction.voucher_date|date:"d-m-Y" }}
+                          </td>
+                          <td class="cb-center">
+                            Cr
+                          </td>
+                          <td class="cb-center">
+                            {{ row.cheque_number|default_if_none:"-" }}
+                          </td>
+                          <td class="cb-narration-cell">
+                            {{ row.transaction.narration|default:"-" }}
+                          </td>
+                          <td class="cb-right">
+                            {{ amt|floatformat:2 }}
+                          </td>
+                        </tr>
+                        {% endif %}
+                      {% endwith %}
+                    {% endif %}
+                  {% empty %}
+                    <tr>
+                      <td colspan="5" class="cb-center brs-empty">No cash-book entries.</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- BANK ENTRY TABLE -->
+          <div class="brs-box" style="margin-top:8px;">
+            <!-- Header + search on same row -->
+            <div class="brs-box-header-row">
+              <div class="brs-box-header">
+                <span>Bank Entry</span>
+                <span class="brs-box-subtitle">
+                  Bank statement entries
+                </span>
+              </div>
+
+              <div class="brs-header-filters">
+                <label class="brs-header-filter-item">
+                  Amount search:
+                  <input type="text" id="bank_amount_filter" class="cb-input" placeholder="Search amount">
+                </label>
+                <label class="brs-header-filter-item">
+                  Cheque search:
+                  <input type="text" id="bank_cheque_filter" class="cb-input" placeholder="Search cheque no.">
+                </label>
+              </div>
+            </div>
+
+            <div class="brs-box-body brs-scroll-body">
+              <table class="cb-table" id="bank-box">
+                <thead>
+                  <tr>
+                    <th class="cb-center cb-col-date">Date</th>
+                    <th class="cb-center cb-col-type">Type</th>
+                    <th class="cb-center cb-col-cheque">Cheque No.</th>
+                    <th class="cb-center cb-col-narration">Bank Narration</th>
+                    <th class="cb-right cb-col-amount">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in bank_entries_all %}
+                    {% if row.cr_amount %}
+                      {% with amt=row.cr_amount type_label="receipts" sign="cr" %}
+                        {% if type_label == request.GET.entry_type %}
+                        <tr class="brs-row"
+                            data-source="bank"
+                            data-id="{{ row.id }}"
+                            data-amount="{{ amt }}"
+                            data-sign="{{ sign }}"
+                            data-type="{{ type_label }}"
+                            data-cheque="{{ row.cheque_number|default_if_none:''|upper }}">
+                          <td class="cb-center">
+                            {{ row.entry_date|date:"d-m-Y" }}
+                          </td>
+                          <td class="cb-center">
+                            Cr
+                          </td>
+                          <td class="cb-center">
+                            {{ row.cheque_number|default_if_none:"-" }}
+                          </td>
+                          <td class="cb-narration-cell">
+                            {{ row.bank_narration|default:"-" }}
+                          </td>
+                          <td class="cb-right">
+                            {{ amt|floatformat:2 }}
+                          </td>
+                        </tr>
+                        {% endif %}
+                      {% endwith %}
+                    {% else %}
+                      {% with amt=row.dr_amount type_label="payments" sign="dr" %}
+                        {% if type_label == request.GET.entry_type %}
+                        <tr class="brs-row"
+                            data-source="bank"
+                            data-id="{{ row.id }}"
+                            data-amount="{{ amt }}"
+                            data-sign="{{ sign }}"
+                            data-type="{{ type_label }}"
+                            data-cheque="{{ row.cheque_number|default_if_none:''|upper }}">
+                          <td class="cb-center">
+                            {{ row.entry_date|date:"d-m-Y" }}
+                          </td>
+                          <td class="cb-center">
+                            Dr
+                          </td>
+                          <td class="cb-center">
+                            {{ row.cheque_number|default_if_none:"-" }}
+                          </td>
+                          <td class="cb-narration-cell">
+                            {{ row.bank_narration|default:"-" }}
+                          </td>
+                          <td class="cb-right">
+                            {{ amt|floatformat:2 }}
+                          </td>
+                        </tr>
+                        {% endif %}
+                      {% endwith %}
+                    {% endif %}
+                  {% empty %}
+                    <tr>
+                      <td colspan="5" class="cb-center brs-empty">No bank-entry entries.</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Selected + totals -->
+        <div class="brs-right-col">
+          <div class="brs-box brs-right-box">
+            <div class="brs-box-header">
+              <span>Selected for BRS</span>
+              <span class="brs-box-subtitle">
+                Total Dr − Total Cr must be 0 to save
+              </span>
+            </div>
+
+            <div class="brs-right-inner">
+              <div class="brs-box-body brs-selected-body brs-scroll-body">
+                <table class="cb-table" id="selected-box">
+                  <thead>
+                    <tr>
+                      <th class="cb-center cb-col-date">Date</th>
+                      <th class="cb-center cb-col-type">Type</th>
+                      <th class="cb-center cb-col-cheque">Cheque No.</th>
+                      <th class="cb-center cb-col-narration">Narration</th>
+                      <th class="cb-right cb-col-amount">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr id="selected-empty-row">
+                      <td colspan="5" class="cb-center brs-empty">
+                        Click any entry on the left to move it here.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="brs-divider"></div>
+
+              <div class="brs-totals">
+                <div class="brs-total-row">
+                  <span class="brs-total-label">Total Dr (Cash Book):</span>
+                  <span class="brs-total-value" id="total-dr-display">0.00</span>
+                </div>
+                <div class="brs-total-row">
+                  <span class="brs-total-label">Total Cr (Bank Entry):</span>
+                  <span class="brs-total-value" id="total-cr-display">0.00</span>
+                </div>
+                <div class="brs-total-row brs-diff-row">
+                  <span class="brs-total-label">Dr − Cr:</span>
+                  <span class="brs-total-value" id="diff-display">0.00</span>
+                </div>
+                <div class="brs-status" id="brs-status-msg">
+                  Difference must be 0.00
+                </div>
+              </div>
+            </div>
+
+            <div id="selected-hidden-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- always-visible button bar -->
+    <div class="brs-footer-bar">
+      <button type="submit"
+              id="brs-submit-btn"
+              class="cb-btn-primary"
+              style="min-width:160px;"
+              disabled>
+        Save Reconciliation
+      </button>
+    </div>
+  </form>
+  {% endif %}
+
+  <style>
+  /* page layout to keep footer visible */
+  .brs-page {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 80px); /* adjust 140px if header/top margin different */
+  }
+
+  .brs-content-area {
+    flex: 1 1 auto;
+    overflow-y: hidden; /* internal scroll for grid/tables */
+    padding-bottom: 0px;
+  }
+
+  .brs-footer-bar {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    text-align: center;
+  }
+
+  .brs-grid {
+    display:grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap:10px;
+    margin-top:4px;
+  }
+  .brs-left-col,
+  .brs-right-col {
+    display:flex;
+    flex-direction:column;
+  }
+  .brs-box {
+    background:radial-gradient(circle at top left,#0b1220,#020617);
+    box-shadow:0 18px 40px rgba(0,0,0,0.9);
+    border:1px solid #37371f;
+    border-radius:4px;
+    padding:6px;
+  }
+
+  /* Combined top filter row (Ledger + Type + Search) */
+  .brs-top-filter-row {
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .brs-top-filter-item {
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    gap:4px;
+  }
+  .brs-top-label {
+    font-size:11px;
+    color:#e5e7eb;
+    margin-bottom:2px;
+  }
+  .brs-top-filter-item select {
+    min-width:180px;
+  }
+  .brs-top-filter-actions {
+    display:flex;
+    align-items:center;
+  }
+
+  /* Box header + inner filters in one row */
+  .brs-box-header-row {
+    display:flex;
+    justify-content:space-between;
+    gap:-5px;
+    align-items:flex-start;
+    margin-bottom:4px;
+    margin-top:-5px;
+  }
+
+  .brs-box-header {
+    display:flex;
+    flex-direction:column;
+    font-size:11px;
+    color:#f9fafb;
+  }
+  .brs-box-header > span:first-child {
+    font-weight:600;
+  }
+  .brs-box-subtitle {
+    font-size:10px;
+    color:#9ca3af;
+  }
+
+  .brs-header-filters {
+    display:flex;
+    gap:10px;
+    align-items:flex-end;
+  }
+  .brs-header-filter-item {
+    display:flex;
+    flex-direction:column;
+    font-size:10px;
+  }
+
+  .brs-box-body {
+    border-top:1px solid #1f2937;
+    padding-top:2px;
+  }
+  .brs-scroll-body {
+    max-height:26vh;
+    overflow-y:auto;
+    position:relative;
+  }
+  .brs-selected-body {
+    max-height:26vh;
+  }
+
+  .cb-table {
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+    font-size:11px;
+    color:#e5e7eb;
+    margin-top:-4px;
+  }
+  .cb-table th,
+  .cb-table td {
+    border-top:1px solid #0266f1;
+    border-bottom:1px solid #0350f6;
+    padding:3px 4px;
+  }
+
+  /* Sticky table header (freeze) */
+  .cb-table thead th {
+    position:sticky;
+    top:0;
+    padding-top:1px;
+    padding-bottom:3px;
+    z-index:2;
+    background:linear-gradient(90deg,#0b1120,#1d4ed8);
+    font-weight:500;
+    font-size:11px;
+    color:#f9fafb;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+  }
+
+  /* Column widths – adjust as you like */
+  .cb-col-date { width:80px; }
+  .cb-col-type { width:45px; }
+  .cb-col-cheque { width:90px; }
+  .cb-col-amount { width:90px; }
+  .cb-col-narration { width:140px; }
+
+  .brs-row {
+    cursor:pointer;
+  }
+  .brs-row:hover {
+    background:#020b30;
+  }
+  .cb-center {
+    text-align:center;
+    white-space:nowrap;
+  }
+  .cb-right {
+    text-align:right;
+    white-space:nowrap;
+  }
+
+  /* narration: fixed width + wrap */
+  .cb-narration-cell {
+    width:140px;
+    max-width:140px;
+    white-space:normal !important;
+    overflow-wrap:break-word;
+    word-break:break-word;
+  }
+
+  .brs-empty {
+    font-size:10px;
+    color:#6b7280;
+  }
+  .brs-right-box {
+    height:100%;
+  }
+  .brs-right-inner {
+    display:flex;
+    flex-direction:column;
+    height:100%;
+  }
+  .brs-divider {
+    border-top:1px solid #4b5563;
+    margin:6px 0;
+  }
+  .brs-totals {
+    font-size:11px;
+    color:#e5e7eb;
+  }
+  .brs-total-row {
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:2px;
+  }
+  .brs-total-label {
+    color:#9ca3af;
+  }
+  .brs-total-value {
+    min-width:80px;
+    text-align:right;
+    font-variant-numeric:tabular-nums;
+  }
+  .brs-diff-row .brs-total-value {
+    font-weight:600;
+  }
+  .brs-status {
+    margin-top:4px;
+    font-size:10px;
+    color:#f97373;
+  }
+  </style>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const cashTable = document.getElementById('cash-box');
+    const bankTable = document.getElementById('bank-box');
+    const selectedTableElem = document.getElementById('selected-box');
+    const selectedTable = selectedTableElem ? selectedTableElem.querySelector('tbody') : null;
+    const selectedEmptyRow = document.getElementById('selected-empty-row');
+    const hiddenContainer = document.getElementById('selected-hidden-container');
+
+    const totalDrDisplay = document.getElementById('total-dr-display');
+    const totalCrDisplay = document.getElementById('total-cr-display');
+    const diffDisplay = document.getElementById('diff-display');
+    const statusMsg = document.getElementById('brs-status-msg');
+    const submitBtn = document.getElementById('brs-submit-btn');
+
+    const cashAmountFilter = document.getElementById('cash_amount_filter');
+    const bankAmountFilter = document.getElementById('bank_amount_filter');
+    const cashChequeFilter = document.getElementById('cash_cheque_filter');
+    const bankChequeFilter = document.getElementById('bank_cheque_filter');
+
+    if (!cashTable || !bankTable || !selectedTable) {
+      return;
+    }
+
+    function parseAmount(row) {
+      const val = row.getAttribute('data-amount');
+      if (!val) return 0;
+      const num = Number(val.toString().replace(/,/g, ''));
+      return isNaN(num) ? 0 : num;
+    }
+
+    // Custom Indian format function (works even if Intl/en-IN is not supported)
+    function formatAmount(num) {
+      if (num == null || isNaN(num)) return '0.00';
+      const parts = Number(num).toFixed(2).split('.');
+      let intPart = parts[0];
+      const decPart = parts[1];
+
+      let lastThree = intPart.slice(-3);
+      let other = intPart.slice(0, -3);
+      if (other !== '') {
+        lastThree = ',' + lastThree;
+      }
+      other = other.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+      return other + lastThree + '.' + decPart;
+    }
+
+    function syncHiddenInputs() {
+      hiddenContainer.innerHTML = '';
+      const rows = selectedTable.querySelectorAll('tr.brs-row');
+      let idx = 0;
+      rows.forEach(row => {
+        const source = row.getAttribute('data-source');
+        const id = row.getAttribute('data-id');
+        const amt = row.getAttribute('data-amount');
+        const sign = row.getAttribute('data-sign');
+        if (!id) return;
+        const base = `selected[${idx}]`;
+        hiddenContainer.insertAdjacentHTML('beforeend', `
+          <input type="hidden" name="${base}[source]" value="${source}">
+          <input type="hidden" name="${base}[id]" value="${id}">
+          <input type="hidden" name="${base}[amount]" value="${amt}">
+          <input type="hidden" name="${base}[sign]" value="${sign}">
+        `);
+        idx += 1;
+      });
+    }
+
+    function recalcTotals() {
+      let totalDr = 0;
+      let totalCr = 0;
+      const rows = selectedTable.querySelectorAll('tr.brs-row');
+      rows.forEach(row => {
+        const amt = parseAmount(row);
+        const sign = row.getAttribute('data-sign');
+        if (sign === 'dr') {
+          totalDr += amt;
+        } else if (sign === 'cr') {
+          totalCr += amt;
+        }
+      });
+      const diff = totalDr - totalCr;
+
+      totalDrDisplay.textContent = formatAmount(totalDr);
+      totalCrDisplay.textContent = formatAmount(totalCr);
+      diffDisplay.textContent = formatAmount(diff);
+
+      if (rows.length === 0) {
+        selectedEmptyRow.style.display = '';
+      } else {
+        selectedEmptyRow.style.display = 'none';
+      }
+
+      if (Math.abs(diff) < 0.005 && rows.length > 0) {
+        statusMsg.textContent = 'OK: Dr − Cr = 0.00, you can save.';
+        statusMsg.style.color = '#22c55e';
+        submitBtn.disabled = false;
+      } else {
+        statusMsg.textContent = 'Difference must be 0.00';
+        statusMsg.style.color = '#f97373';
+        submitBtn.disabled = true;
+      }
+      syncHiddenInputs();
+    }
+
+    function moveRowToSelected(row) {
+      selectedTable.appendChild(row);
+      recalcTotals();
+    }
+
+    function moveRowBack(row) {
+      const source = row.getAttribute('data-source');
+      if (source === 'cash') {
+        cashTable.querySelector('tbody').appendChild(row);
+      } else if (source === 'bank') {
+        bankTable.querySelector('tbody').appendChild(row);
+      }
+      recalcTotals();
+    }
+
+    function handleRowClick(e) {
+      const row = e.currentTarget;
+      const parentTbody = row.parentNode;
+      if (parentTbody === selectedTable) {
+        moveRowBack(row);
+      } else {
+        moveRowToSelected(row);
+      }
+    }
+
+    function wireTableRows(table) {
+      const rows = table.querySelectorAll('tbody tr.brs-row');
+      rows.forEach(r => r.addEventListener('click', handleRowClick));
+    }
+
+    wireTableRows(cashTable);
+    wireTableRows(bankTable);
+    wireTableRows(selectedTable);
+
+    const brsForm = document.getElementById('brs-adjust-form');
+    if (brsForm) {
+      brsForm.addEventListener('submit', function (e) {
+        // still block if button is disabled (difference not zero or no rows)
+        if (submitBtn.disabled) {
+          e.preventDefault();
+          alert('Cannot save: Dr − Cr must be 0.00.');
+          return;
+        }
+
+        // confirmation dialog before final submit
+        const ok = window.confirm('Are you sure you want to save this reconciliation?');
+        if (!ok) {
+          e.preventDefault();
+          return;
+        }
+        // if OK, allow normal submit (no need to call brsForm.submit())
+      });
+    }
+
+    // Amount filters – independent per table, compare against unformatted numeric text
+    function filterTableByAmount(table, input) {
+      const query = (input.value || '').replace(/,/g, '').trim();
+      const rows = table.querySelectorAll('tbody tr.brs-row');
+      if (!query) {
+        rows.forEach(r => r.style.display = '');
+        return;
+      }
+      rows.forEach(row => {
+        const amt = parseAmount(row);
+        const amtText = Number(amt).toFixed(2).replace(/,/g, '');
+        if (amtText.indexOf(query) !== -1) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    // Cheque filters – independent per table
+    function filterTableByCheque(table, input) {
+      const query = (input.value || '').toUpperCase().trim();
+      const rows = table.querySelectorAll('tbody tr.brs-row');
+      if (!query) {
+        rows.forEach(r => r.style.display = '');
+        return;
+      }
+      rows.forEach(row => {
+        const chq = (row.getAttribute('data-cheque') || '').toUpperCase();
+        if (chq.indexOf(query) !== -1) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    if (cashAmountFilter) {
+      cashAmountFilter.addEventListener('input', function () {
+        filterTableByAmount(cashTable, cashAmountFilter);
+      });
+    }
+    if (bankAmountFilter) {
+      bankAmountFilter.addEventListener('input', function () {
+        filterTableByAmount(bankTable, bankAmountFilter);
+      });
+    }
+    if (cashChequeFilter) {
+      cashChequeFilter.addEventListener('input', function () {
+        filterTableByCheque(cashTable, cashChequeFilter);
+      });
+    }
+    if (bankChequeFilter) {
+      bankChequeFilter.addEventListener('input', function () {
+        filterTableByCheque(bankTable, bankChequeFilter);
+      });
+    }
+
+    // FORMAT ALL VISIBLE AMOUNT CELLS ON LOAD (cash + bank)
+    function formatAmountCells(table) {
+      const rows = table.querySelectorAll('tbody tr.brs-row');
+      rows.forEach(row => {
+        const amt = parseAmount(row);
+        const amtCell = row.querySelector('td.cb-right');
+        if (amtCell) {
+          amtCell.textContent = formatAmount(amt);
+        }
+      });
+    }
+
+    formatAmountCells(cashTable);
+    formatAmountCells(bankTable);
+
+    // When rows move into selected table, also show Indian format there
+    function refreshSelectedAmountCells() {
+      const rows = selectedTable.querySelectorAll('tr.brs-row');
+      rows.forEach(row => {
+        const amt = parseAmount(row);
+        const amtCell = row.querySelector('td.cb-right');
+        if (amtCell) {
+          amtCell.textContent = formatAmount(amt);
+        }
+      });
+    }
+
+    // Wrap recalcTotals so selected-table cells are always formatted
+    const originalRecalcTotals = recalcTotals;
+    function recalcTotalsWithSelectedFormatting() {
+      refreshSelectedAmountCells();
+      originalRecalcTotals();
+    }
+    // Override calls:
+    recalcTotals = recalcTotalsWithSelectedFormatting;
+
+    // Initial totals and right-box formatting
+    recalcTotalsWithSelectedFormatting();
+  });
+  </script>
+{% endblock %}

@@ -1,0 +1,302 @@
+{% extends "dashboards/base_root_dashboard.html" %}
+
+{% block title %}View ULB | Muni Dashboard{% endblock %}
+
+{% block content %}
+<div class="card">
+
+    {% if messages %}
+    <div id="message-container"
+         style="
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1050;
+            min-width: 300px;
+         ">
+        {% for message in messages %}
+            {% if message.tags == 'success' %}
+                <div class="text-center mb-2"
+                     style="font-style: italic; color: #198754;">
+                    {{ message }}
+                </div>
+            {% elif message.tags == 'error' %}
+                <div class="text-center mb-2"
+                     style="font-style: italic; color: #dc3545;">
+                    {{ message }}
+                </div>
+            {% else %}
+                <div class="text-center mb-2"
+                     style="font-style: italic; color: #212529;">
+                    {{ message }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ULB selector on top -->
+    <form method="post" class="mb-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="select">
+
+        <div class="form-grid ms-5" style="margin-left: 100px;">
+            <div class="form-group" style="display: flex; align-items: flex-end; gap: 10px;">
+                <div>
+                    <label for="id_selected_ulb_id" class="required-label">
+                        Select ULB
+                    </label>
+                    <select id="id_selected_ulb_id" name="selected_ulb_id"
+                            class="form-control"
+                            style="width: 400px;"
+                            required>
+                        <option value="">-- Select ULB --</option>
+                        {% for u in ulb_list %}
+                            <option value="{{ u.id }}"
+                                {% if ulb and ulb.id == u.id %}selected{% endif %}>
+                                {{ u.ulb_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <button type="submit"
+                            class="btn px-4"
+                            style="
+                                margin-bottom: 2px;
+                                padding: 8px 22px;
+                                border-radius: 999px;
+                                border: none;
+                                background: linear-gradient(120deg, #22c55e, #16a34a);
+                                color: #020617;
+                                font-size: 13px;
+                                letter-spacing: 0.12em;
+                                text-transform: uppercase;
+                                cursor: pointer;
+                            ">
+                        View
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <h2 style="font-size:18px; margin-bottom:12px;">View / Edit ULB</h2>
+    <form method="post" id="ulb-edit-form">
+        {% csrf_token %}
+        <div class="form-grid ms-5" style="margin-left: 100px;">
+
+            <div class="form-group">
+                <label class="required-label" for="id_ulb_name">ULB Name</label>
+                <input type="text" id="id_ulb_name" name="ulb_name"
+                       class="form-control"
+                       style="max-width: 400px;"
+                       value="{{ ulb.ulb_name }}"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label class="required-label" for="id_ulb_type">ULB Type</label>
+                <select id="id_ulb_type" name="ulb_type"
+                        class="form-control"
+                        style="max-width: 400px;"
+                        required>
+                    <option value="">Select ULB Type</option>
+                    <option value="NAGAR_NIGAM"
+                        {% if ulb.ulb_type == 'NAGAR_NIGAM' or ulb.ulb_type == 'Nagar Nigam' %}selected{% endif %}>
+                        Nagar Nigam
+                    </option>
+                    <option value="NAGAR_PARISHAD"
+                        {% if ulb.ulb_type == 'NAGAR_PARISHAD' or ulb.ulb_type == 'Nagar Parishad' %}selected{% endif %}>
+                        Nagar Parishad
+                    </option>
+                    <option value="NAGAR_PANCHAYAT"
+                        {% if ulb.ulb_type == 'NAGAR_PANCHAYAT' or ulb.ulb_type == 'Nagar Panchayat' %}selected{% endif %}>
+                        Nagar Panchayat
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="required-label" for="id_email">Email ID</label>
+                <input type="email" id="id_email" name="email"
+                       class="form-control"
+                       style="max-width: 400px;"
+                       value="{{ ulb.email }}"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label for="id_pan">PAN No. (if available)</label>
+                <input type="text" id="id_pan" name="pan_no"
+                       class="form-control"
+                       style="max-width: 400px;"
+                       value="{{ ulb.pan_no }}">
+            </div>
+
+            <div class="form-group">
+                <label class="required-label" for="id_tin">TIN No.</label>
+                <input type="text" id="id_tin" name="tin_no"
+                       class="form-control"
+                       style="max-width: 400px;"
+                       value="{{ ulb.tin_no }}"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label class="required-label" for="id_gst">GST No.</label>
+                <input type="text" id="id_gst" name="gst_no"
+                       class="form-control"
+                       style="max-width: 400px;"
+                       value="{{ ulb.gst_no }}"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label class="required-label" for="id_landmark">Land Mark</label>
+                <input type="text" id="id_landmark" name="land_mark"
+                       class="form-control"
+                       style="max-width: 400px;"
+                       value="{{ ulb.land_mark }}"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label class="required-label" for="id_district">District</label>
+                <input type="text" id="id_district" name="district"
+                       class="form-control"
+                       style="max-width: 400px;"
+                       value="{{ ulb.district }}"
+                       required>
+            </div>
+
+            <div class="form-group" style="display: flex; gap: 10px;">
+                <div>
+                    <label class="required-label" for="id_state">State</label>
+                    <input type="text" id="id_state" name="state"
+                           class="form-control"
+                           style="width: 195px;"
+                           value="{{ ulb.state }}"
+                           required>
+                </div>
+
+                <div>
+                    <label class="required-label" for="id_date_of_creation">Date of Creation</label>
+                    <input type="date" id="id_date_of_creation" name="date_of_creation"
+                           class="form-control"
+                           style="width: 195px;"
+                           value="{{ ulb.date_of_creation|date:'Y-m-d' }}"
+                           required>
+                </div>
+            </div>
+
+            <!-- Country + ULB Code side by side -->
+            <div class="form-group" style="display: flex; gap: 10px;">
+                <div>
+                    <label class="required-label" for="id_country">Country</label>
+                    <input type="text" id="id_country" name="country"
+                           class="form-control"
+                           style="width: 195px;"
+                           value="{{ ulb.country }}"
+                           required>
+                </div>
+
+                <div>
+                    <label class="required-label" for="id_ulb_code">ULB Code</label>
+                    <input type="text" id="id_ulb_code" name="ulb_code"
+                           class="form-control"
+                           style="width: 195px;"
+                           maxlength="10"
+                           value="{{ ulb.code }}"
+                           placeholder="e.g. DNP"
+                           required>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="form-actions mt-3 mb-2"
+             style="
+                display: flex;
+                justify-content: center;
+                gap: 60px;
+             ">
+            <button type="submit"
+                    name="action"
+                    value="edit"
+                    style="
+                        padding: 8px 22px;
+                        border-radius: 999px;
+                        border: none;
+                        background: linear-gradient(120deg, #22c55e, #0ea5e9);
+                        color: #020617;
+                        font-size: 13px;
+                        letter-spacing: 0.12em;
+                        text-transform: uppercase;
+                        cursor: pointer;
+                    "
+                    onclick="return confirm('Are you sure you want to Edit?');">
+                Edited save
+            </button>
+
+            <button type="submit"
+                    name="action"
+                    value="delete"
+                    style="
+                        padding: 8px 22px;
+                        border-radius: 999px;
+                        border: none;
+                        background: linear-gradient(120deg, #f97373, #dc2626);
+                        color: #020617;
+                        font-size: 13px;
+                        letter-spacing: 0.12em;
+                        text-transform: uppercase;
+                        cursor: pointer;
+                    "
+                    onclick="return confirm('Are you sure you want to Delete?');">
+                ULB delete
+            </button>
+        </div>
+
+    </form>
+</div>
+
+<script>
+    setTimeout(function() {
+        var container = document.getElementById('message-container');
+        if (container) {
+            container.style.transition = 'opacity 0.3s ease';
+            container.style.opacity = '0';
+            setTimeout(function() {
+                if (container && container.parentNode) {
+                    container.parentNode.removeChild(container);
+                }
+            }, 300);
+        }
+    }, 1500);
+</script>
+
+<!-- NEW: reset ULB dropdown and clear fields when reset_after_load=True -->
+<script>
+    window.addEventListener('load', function () {
+        var shouldReset = {{ reset_after_load|yesno:"true,false" }};  // set in view on success
+        if (!shouldReset) {
+            return;
+        }
+
+        // reset the selector to "-- Select ULB --"
+        var ulbSelect = document.getElementById('id_selected_ulb_id');
+        if (ulbSelect) {
+            ulbSelect.value = "";
+        }
+
+        // clear all edit fields
+        var form = document.getElementById('ulb-edit-form');
+        if (form) {
+            form.reset();
+        }
+    });
+</script>
+{% endblock %}

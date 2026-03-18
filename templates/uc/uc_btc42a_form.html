@@ -1,0 +1,322 @@
+{# templates/uc/uc_btc42a_form.html #}
+{% extends "uc/base_uc.html" %}
+
+{% block title %}BTC Form 42A | Muni Dashboard{% endblock %}
+{% block report_header_title %}BTC Form 42A{% endblock %}
+
+{% block uc_content %}
+
+<style>
+/* Page container mimicking other UC pages */
+.uc-btc42a-page {
+  display:flex;
+  flex-direction:column;
+  height:calc(83vh - 25px);
+  padding:0 16px 16px 16px;
+  box-sizing:border-box;
+  margin-left:-16px;
+  margin-right:0;
+  margin-top:-10px;
+  overflow-x:hidden;
+}
+
+/* Scrollable content area */
+.uc-btc42a-scroll {
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  background:radial-gradient(circle at top left, #0b1220, #020617);
+  box-shadow:0 18px 40px rgba(0,0,0,0.9);
+  padding:20px;
+}
+
+/* Inner A4-style sheet */
+.uc-btc42a-sheet {
+  background:white;
+  color:black;
+  margin:0 auto;
+  padding:20px 40px;
+  font-family:"Times New Roman",serif;
+  font-size:14px;
+  width:794px;
+  min-height:1123px;
+  box-sizing:border-box;
+  text-align:justify;
+}
+
+/* Download button container */
+.uc-btc42a-toolbar {
+  display:flex;
+  justify-content:flex-end;
+  margin-bottom:10px;
+}
+
+.uc-btc42a-download-btn {
+  display:inline-block;
+  padding:4px 10px;
+  font-size:11px;
+  border-radius:4px;
+  border:1px solid #facc15;
+  background:#facc15;
+  color:#1f2937;
+  text-decoration:none;
+}
+
+/* Original styles adjusted to scope inside sheet */
+.uc-btc42a-sheet h3 {
+  text-align:center;
+  margin:0;
+}
+.uc-btc42a-sheet h2 {
+  text-align:center;
+  margin:0;
+  text-decoration:underline;
+}
+.uc-btc42a-sheet .small {
+  text-align:center;
+  font-size:13px;
+}
+.uc-btc42a-sheet .right {
+  text-align:right;
+}
+.uc-btc42a-sheet table {
+  width:100%;
+  border-collapse:collapse;
+}
+.uc-btc42a-sheet td,
+.uc-btc42a-sheet th {
+  border:1px solid black;
+  padding:4px;
+}
+.uc-btc42a-sheet .no-border td {
+  border:none;
+}
+.uc-btc42a-sheet .section {
+  margin-top:15px;
+}
+.uc-btc42a-sheet .header-blue th {
+  background:#9fb0cc;
+  height:140px;
+  vertical-align:bottom;
+  font-size:12px;
+}
+.uc-btc42a-sheet .vertical {
+  writing-mode:vertical-rl;
+  transform:rotate(180deg);
+  text-align:center;
+}
+.uc-btc42a-sheet .number-row td {
+  background:#e9a46f;
+  text-align:center;
+  font-weight:bold;
+}
+.uc-btc42a-sheet .signature {
+  margin-top:40px;
+  display:flex;
+  justify-content:space-between;
+}
+.uc-btc42a-sheet .center {
+  text-align:center;
+}
+</style>
+
+<div class="uc-btc42a-page">
+  <div class="uc-btc42a-scroll">
+
+    <div class="uc-btc42a-toolbar">
+      {% if 'BTN_UC_EXPORT_PDF' in allowed_codes %}
+        <a href="?uc_id={{ uc_id }}&export=pdf"
+           class="uc-btc42a-download-btn">
+          Download PDF
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="uc-btc42a-sheet">
+
+      <h3>BTC Form - 42A</h3>
+      <h2>FORM FOR UTILISATION CERTIFICATE</h2>
+      <div class="small">(See Rule 271)</div>
+
+      <div class="right">Not Payable at Treasury</div>
+
+      <table>
+        <tr>
+          <td>Major Head :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>{{ major_head }}</strong></td>
+          <td>Treasury Code :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>{{ treasury_code }}</strong></td>
+        </tr>
+        <tr>
+          <td>Sub Major Head :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>{{ sub_major_head }}</strong></td>
+          <td>DDO Code :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>{{ ddo_code }}</strong></td>
+        </tr>
+        <tr>
+          <td>Minor Head :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>{{ minor_head }}</strong></td>
+          <td>Bill Code :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>{{ bill_code }}</strong></td>
+        </tr>
+        <tr>
+          <td>Sub Head :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>{{ sub_head }}</strong></td>
+          <td>Head Code :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>{{ head_code }}</strong></td>
+        </tr>
+      </table>
+
+      <br>
+
+      <table class="no-border">
+        <tr>
+          <td>
+            Utilization Certificate No. :
+            <strong>{{ uc_number }}</strong>
+          </td>
+          <td class="right">
+            Date :
+            {% if uc_date %}{{ uc_date|date:"d-m-Y" }}{% endif %}
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Office :
+            <strong>{{ current_ulb_name }}</strong>
+          </td>
+          <td>
+            Month :
+            {{ month_name }} / {{ year_text }}
+          </td>
+        </tr>
+      </table>
+
+      <div class="section">
+        <b>1.</b>
+        Certified that out of Rs. <strong>{{ sanctioned_amount }}</strong> of Grants-in-aid sanctioned during the year
+        <strong>{{ year_text }}</strong> in favour of <strong>{{ current_ulb_name }}</strong> under this Department letter
+        no. <strong>{{ letter_no }}</strong> dated {% if letter_date %}<strong>{{ letter_date|date:"d-m-Y" }}</strong>{% endif %} given in the
+        table below and Rs. <strong>NIL</strong> on account of unspent balance of the previous year,
+        a sum of Rs. <strong>{{ utilized_amount }}</strong> has been utilized for the purpose for which it was sanctioned and that
+        the balance of Rs. <strong>{{ unutilised_balance }}</strong> remained unutilized at the end of the year.
+        Rs. <strong>NIL</strong> has been surrendered to the Govt. vide letter No. ........xxx..... dated ......xxx....... and will be adjusted 
+        towards the grants-in-aid payable during the next financial year.
+      </div>
+
+      <div class="section">
+        <b><span style="text-decoration: underline;">
+        A. For the Grant to Government Offices for various schemes</span></b><br>
+        Certified that the remaining undrawn amount Rs................................... (in words) has been
+        surrendered vide letter no............................ dated ......................
+        and with the remaining drawn grant amount Rs. .......................... has been sent along with this surrender letter.
+      </div>
+
+      <div class="section">
+        <b>2. Kinds of checks exercised</b><br>
+        (Audited Accounts, Cash Book, Asset Register, Distribution Register, Stock Register,
+        Purchase Register etc.)
+        <br><br>
+
+        <table class="no-border">
+          <tr>
+            <td>i. Checked from Treasury Challan</td>
+            <td>ii. Checked from Accountant Cashbook</td>
+          </tr>
+          <tr>
+            <td>iii. Checked from Treasury Passbook</td>
+            <td>iv. Cashbook</td>
+          </tr>
+          <tr>
+            <td>v. Others</td>
+            <td></td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <b>3. Particulars of Grants-in-aid</b>
+
+        <table>
+          <tr class="header-blue">
+            <th class="vertical">Sl No.</th>
+            <th class="vertical">Sanction / Allotment Letter No. &amp; Date</th>
+            <th class="vertical">Name of Grantee Institution / Office</th>
+            <th class="vertical">Purpose of Grant / Scheme</th>
+            <th class="vertical">Bill No &amp; Date</th>
+            <th class="vertical">Amount of Grant Drawn</th>
+            <th class="vertical">T.V. No &amp; Date</th>
+            <th class="vertical">Amount UC</th>
+            <th class="vertical">Balance Amount</th>
+            <th class="vertical">Amount Surrendered</th>
+          </tr>
+
+          <tr class="number-row">
+            <td>1</td>
+            <td>2</td>
+            <td>3</td>
+            <td>4</td>
+            <td>5</td>
+            <td>6</td>
+            <td>7</td>
+            <td>8</td>
+            <td>9</td>
+            <td>10</td>
+          </tr>
+
+          {% if grant_rows %}
+            {% for g in grant_rows %}
+              <tr>
+                <td class="center">{{ forloop.counter }}</td>
+                <td class="vertical">{{ g.sanction_letter }}</td>
+                <td class="vertical">{{ g.grantee_name }}</td>
+                <td class="vertical">{{ g.purpose }}</td>
+                <td class="vertical">{{ g.bill_no_date }}</td>
+                <td class="vertical">{{ g.grant_drawn }}</td>
+                <td class="vertical">{{ g.tv_no_date }}</td>
+                <td class="vertical">{{ g.amount_uc }}</td>
+                <td class="vertical">{{ g.balance }}</td>
+                <td class="vertical">{{ g.amount_surrendered }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr style="height:110px">
+              <td class="vertical"></td>
+              <td class="vertical"></td>
+              <td class="vertical"></td>
+              <td class="vertical"></td>
+              <td class="vertical"></td>
+              <td class="vertical"></td>
+              <td class="vertical"></td>
+              <td class="vertical"></td>
+              <td class="vertical"></td>
+              <td class="vertical"></td>
+            </tr>
+          {% endif %}
+        </table>
+      </div>
+
+      <br>
+
+      <div class="right">
+        Signature &amp; Stamp of Grantee Institution / Office
+      </div>
+
+      <br>
+
+      <b>This is certified that:</b>
+
+      <ol>
+        <li>Audited Accounts Report has been obtained from the Grantee Agency/Institution and the same has been kept in this office.</li>
+        <li>This Grantee Agency/Institution has been exempted from producing Audited Accounts Report and in this case Utilization Certificate is being countersigned 
+            on the basis of checking of <strong>CASH BOOK</strong> of Accounts/Records.</li>
+      </ol>
+
+      <div class="signature">
+        <div>
+          Counter Signature &amp; Stamp by Sanctioning<br>
+          Authority / Officer authorized by him
+        </div>
+        <div>
+          Signature &amp; Stamp of Drawing &amp;<br>
+          Disbursing Officer for the Grant-in-Aid
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}

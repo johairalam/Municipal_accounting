@@ -1,0 +1,501 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{% block title %}Root Developer | Muni Dashboard{% endblock %}</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+
+    html, body {
+        height: 100%;
+        overflow: hidden; /* no scrollbars X or Y */
+    }
+
+    body {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: radial-gradient(circle at top, #1d4ed8 0, #020617 45%, #000000 100%);
+        color: #e5e7eb;
+    }
+
+    .top-header {
+        width: 100%;
+        padding: 14px 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(90deg, rgba(15,23,42,0.98), rgba(15,23,42,0.92));
+        box-shadow: 0 9px 30px rgba(0,0,0,0.7);
+        z-index: 10;
+        flex-shrink: 0;
+    }
+
+    .top-header-left { display: flex; align-items: center; gap: 12px; }
+    .top-logo img { height: 50px; width: auto; display: block; }
+
+    .top-title-wrap { display: flex; flex-direction: column; gap: 3px; }
+    .top-title { font-size: 16px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #f9fafb; }
+    .top-subtitle { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: #9ca3af; }
+
+    .top-header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #9ca3af;
+        position: relative;
+    }
+
+    .user-dropdown {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .user-badge {
+        padding: 5px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.7);
+        background: rgba(15,23,42,0.85);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .user-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 10px rgba(34,197,94,0.9);
+    }
+
+    .user-name {
+        max-width: 160px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .user-caret { font-size: 10px; opacity: 0.8; }
+
+    .dropdown-menu {
+        position: absolute;
+        top: 120%;
+        right: 0;
+        min-width: 180px;
+        background: #020617;
+        border-radius: 10px;
+        border: 1px solid rgba(55,65,81,0.9);
+        box-shadow: 0 14px 35px rgba(0,0,0,0.9);
+        padding: 6px 0;
+        display: none;
+        z-index: 20;
+    }
+
+    .dropdown-menu.open { display: block; }
+
+    .dropdown-item {
+        display: block;
+        width: 100%;
+        padding: 8px 14px;
+        font-size: 10px;
+        color: #e5e7eb;
+        text-decoration: none;
+        background: transparent;
+        border: none;
+        text-align: center;
+        cursor: pointer;
+    }
+
+    .dropdown-item:hover { background: rgba(15,23,42,0.95); }
+
+    .app-layout {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        gap: 0;
+        padding: 0 24px 24px;
+        height: calc(100vh - 78px); /* 78px ≈ header height */
+        overflow: hidden;
+    }
+
+    .sidebar {
+        border-right: 1px solid rgba(55,65,81,0.9);
+        padding-top: 0;
+        padding-right: 16px;
+        display: flex;
+        margin-top: -350px;
+        margin-bottom: 0;
+        overflow: hidden;
+    }
+
+    .sidebar-inner { margin: auto 0; width: 100%; }
+
+    .sidebar-title {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: #9ca3af;
+        margin-bottom: 12px;
+        text-align: center;
+    }
+
+    .sidebar-section { margin-bottom: 22px; }
+
+    .sidebar-link {
+        display: block;
+        padding: 8px 12px;
+        margin-bottom: 6px;
+        border-radius: 10px;
+        font-size: 14px;
+        color: #e5e7eb;
+        text-decoration: none;
+        border: 1px solid transparent;
+        background: transparent;
+        transition: all 0.18s ease;
+        text-align: center;
+    }
+
+    .sidebar-link:hover {
+        background: rgba(15,23,42,0.95);
+        border-color: rgba(148,163,184,0.8);
+    }
+
+    .sidebar-link.active {
+        background: linear-gradient(120deg, #0ea5e9, #22c55e);
+        color: #020617;
+        border-color: transparent;
+        box-shadow: 0 10px 20px rgba(14,165,233,0.6), 0 0 16px rgba(34,197,94,0.8);
+    }
+
+    .content-area {
+        display: flex;
+        flex-direction: column;
+        padding-top: 18px;
+        padding-left: 20px;
+        overflow: hidden;
+    }
+
+    .nav-strip {
+        width: 100%;
+        padding: 8px 0 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: flex-start;
+        border-bottom: 1px solid rgba(55,65,81,0.9);
+        flex-shrink: 0;
+    }
+
+    .nav-pill {
+        padding: 7px 18px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: #e5e7eb;
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.18s ease;
+    }
+
+    .nav-pill.active {
+        background: linear-gradient(120deg, #f97316, #facc15);
+        color: #111827;
+        border-color: rgba(250,204,21,0.9);
+        box-shadow: 0 10px 22px rgba(249,115,22,0.7), 0 0 16px rgba(250,204,21,0.9);
+    }
+
+    .nav-pill:not(.active):hover {
+        border-color: rgba(148,163,184,0.8);
+        background: rgba(15,23,42,0.95);
+    }
+
+    .main {
+        padding-top: 18px;
+        min-height: 0;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    .card {
+        background: rgba(15,23,42,0.9);
+        border-radius: 14px;
+        border: 1px solid rgba(55,65,81,0.9);
+        padding: 16px 18px;
+        box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 4px;
+        color: #e5e7eb;
+    }
+
+    .required-label::after {
+        content: " *";
+        color: #f97373;
+        font-weight: bold;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid rgba(75,85,99,0.9);
+        background: #020617;
+        color: #e5e7eb;
+        font-size: 13px;
+    }
+
+    .form-actions {
+        margin-top: 16px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .btn-primary {
+        padding: 8px 22px;
+        border-radius: 999px;
+        border: none;
+        background: linear-gradient(120deg, #22c55e, #0ea5e9);
+        color: #020617;
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        cursor: pointer;
+    }
+
+    .btn-primary:hover { filter: brightness(1.05); }
+
+    @media (max-width: 900px) {
+        .app-layout {
+            grid-template-columns: minmax(0, 1fr);
+            padding: 0 16px 18px;
+            height: calc(100vh - 78px);
+        }
+        .sidebar {
+            border-right: none;
+            border-bottom: 1px solid rgba(55,65,81,0.9);
+            margin-bottom: 12px;
+            padding-right: 0;
+        }
+        .content-area { padding-left: 0; }
+        .form-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+</style>
+</head>
+<body>
+
+<header class="top-header">
+    <div class="top-header-left">
+        <div class="top-logo">
+            <img src="{% static 'accounts/logo.png' %}" alt="Muni Logo">
+        </div>
+        <div class="top-title-wrap">
+            <div class="top-title">BIHAR MUNICIPAL ACCOUNTING</div>
+
+            {% if request.user.role == "ROOT_DEV" %}
+                <div class="top-subtitle">ROOT DEVELOPER DASHBOARD</div>
+            {% elif request.user.role == "DEV" %}
+                <div class="top-subtitle">DEVELOPER DASHBOARD</div>
+            {% elif request.user.role == "ADMIN" %}
+                <div class="top-subtitle">ADMIN DASHBOARD</div>
+            {% else %}
+                <div class="top-subtitle">USER DASHBOARD</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="top-header-right">
+        <div>
+            {% if request.user.role == "ROOT_DEV" %}
+                <div class="top-subtitle">ROOT DEVELOPER</div>
+            {% elif request.user.role == "DEV" %}
+                <div class="top-subtitle">DEVELOPER</div>
+            {% elif request.user.role == "ADMIN" %}
+                <div class="top-subtitle">ADMIN</div>
+            {% else %}
+                <div class="top-subtitle">USER</div>
+            {% endif %}
+        </div>
+        <div class="user-dropdown" id="userDropdown">
+            <div class="user-badge">
+                <span class="user-dot"></span>
+                <span class="user-name">{{ request.user.username }}</span>
+                <span class="user-caret">▾</span>
+            </div>
+            <div class="dropdown-menu" id="userMenu">
+                <a class="dropdown-item" href="{% url 'change_password' %}">Change Password</a>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item">Logout</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="app-layout">
+    <aside class="sidebar">
+        <div class="sidebar-inner">
+            {# ULB section, visible when active_section != 'users' #}
+            <div class="sidebar-section"
+                 id="sidebar-ulb"
+                 style="{% if active_section == 'users' %}display:none;{% endif %}">
+                <div class="sidebar-title">ULB</div>
+
+                {% if 'MENU_CREATE_ULB' in allowed_codes %}
+                    <a href="{% url 'create_ulb' %}"
+                       class="sidebar-link {% if request.resolver_match.url_name == 'create_ulb' %}active{% endif %}">
+                        Create ULB
+                    </a>
+                {% endif %}
+
+                {% if 'MENU_OPEN_ULB' in allowed_codes %}
+                    <a href="{% url 'open_ulb' %}"
+                       class="sidebar-link {% if request.resolver_match.url_name == 'open_ulb' %}active{% endif %}">
+                        Open ULB
+                    </a>
+                {% endif %}
+
+                {% if 'MENU_VIEW_ULB' in allowed_codes %}
+                    <a href="{% url 'view_ulb' %}"
+                       class="sidebar-link {% if request.resolver_match.url_name == 'view_ulb' %}active{% endif %}">
+                        View ULB
+                    </a>
+                {% endif %}
+                {% if 'MENU_ULB_WISE_REPORT' in allowed_codes %}
+                    <a href="{% url 'ulb_wise_report' %}"
+                       class="sidebar-link {% if request.resolver_match.url_name == 'ulb_wise_report' %}active{% endif %}">
+                        ULB Wise Report
+                    </a>
+                {% endif %}
+            </div>
+
+            {# Users section, visible when active_section == 'users' #}
+            <div class="sidebar-section"
+                 id="sidebar-users"
+                 style="{% if active_section == 'users' %}display:block;{% else %}display:none;{% endif %}">
+                <div class="sidebar-title">Users</div>
+
+                {% if 'MENU_CREATE_USERS' in allowed_codes %}
+                    <a href="{% url 'create_user' %}"
+                       class="sidebar-link {% if request.resolver_match.url_name == 'create_user' %}active{% endif %}">
+                        Create User
+                    </a>
+                {% endif %}
+
+                {% if 'MENU_MANAGE_USERS' in allowed_codes %}
+                    <a href="{% url 'manage_users' %}"
+                       class="sidebar-link {% if request.resolver_match.url_name == 'manage_users' %}active{% endif %}">
+                        Manage Users
+                    </a>
+                {% endif %}
+
+                {% if 'MENU_MANAGE_ACCESS' in allowed_codes %}
+                    <a href="{% url 'manage_access' %}"
+                       class="sidebar-link {% if request.resolver_match.url_name == 'manage_access' %}active{% endif %}">
+                        Manage Accesses
+                    </a>
+                {% endif %}
+
+                {% if 'MENU_USER_WISE_REPORT' in allowed_codes %}
+                    <a href="{% url 'user_wise_report' %}"
+                       class="sidebar-link {% if request.resolver_match.url_name == 'user_wise_report' %}active{% endif %}">
+                        User Wise Report
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </aside>
+
+    <div class="content-area">
+        <div class="nav-strip">
+            <button
+                class="nav-pill {% if active_section != 'users' %}active{% endif %}"
+                id="tab-ulb"
+                type="button">
+                ULB
+            </button>
+            <button
+                class="nav-pill {% if active_section == 'users' %}active{% endif %}"
+                id="tab-users"
+                type="button">
+                Users
+            </button>
+        </div>
+
+        <main class="main">
+            <div id="page-content">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    const tabUlb = document.getElementById('tab-ulb');
+    const tabUsers = document.getElementById('tab-users');
+    const sidebarUlb = document.getElementById('sidebar-ulb');
+    const sidebarUsers = document.getElementById('sidebar-users');
+    const pageContent = document.getElementById('page-content');  // << add this
+
+    if (tabUlb && tabUsers && sidebarUlb && sidebarUsers && pageContent) {
+        tabUlb.addEventListener('click', () => {
+            tabUlb.classList.add('active');
+            tabUsers.classList.remove('active');
+
+            sidebarUlb.style.display = '';
+            sidebarUsers.style.display = 'none';
+
+            // clear content area
+            pageContent.innerHTML = '';
+        });
+
+        tabUsers.addEventListener('click', () => {
+            tabUsers.classList.add('active');
+            tabUlb.classList.remove('active');
+
+            sidebarUsers.style.display = '';
+            sidebarUlb.style.display = 'none';
+
+            // clear content area
+            pageContent.innerHTML = '';
+        });
+    }
+
+    const userDropdown = document.getElementById('userDropdown');
+    const userMenu = document.getElementById('userMenu');
+
+    if (userDropdown && userMenu) {
+        userDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userMenu.classList.toggle('open');
+        });
+
+        document.addEventListener('click', () => {
+            userMenu.classList.remove('open');
+        });
+    }
+</script>
+
+
+</body>
+</html>

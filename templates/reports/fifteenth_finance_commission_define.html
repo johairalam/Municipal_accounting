@@ -1,0 +1,484 @@
+{% extends "reports/base_15th_fc.html" %}
+
+{% block fc_content %}
+<div class="ie-page">
+  <h2 style="text-align:center; font-weight:bold; margin-top: -20px; color: #fa6150; margin-bottom:6px;">
+    15TH FC LEDGER 
+  </h2>
+
+<div style="display:flex; gap:16px; align-items:flex-start;">
+
+    {# Left: dropdown + date + balance + ratio + define button #}
+    <div style="
+        flex:0 0 380px;
+        background:rgba(15,23,42,0.9);
+        border-radius:12px;
+        border:1px solid rgba(55,65,81,0.9);
+        padding:14px 16px;
+    ">
+        <h3 style="font-size:15px; margin-bottom:10px; color:#e5e7eb;">
+            Select Ledger (Code starts with 450)
+        </h3>
+
+        <form method="post" style="display:flex; flex-direction:column; gap:10px;"
+              onsubmit="return handleSubmit(this);">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="define">
+
+            {# Ledger dropdown #}
+            <label style="font-size:12px; color:#9ca3af;">
+                Ledger
+            </label>
+            <select name="ledger_id"
+                    style="
+                        width:100%;
+                        padding:6px 10px;
+                        border-radius:8px;
+                        border:1px solid rgba(148,163,184,0.8);
+                        background:#020617;
+                        color:#e5e7eb;
+                        font-size:13px;
+                    ">
+                <option value="">-- Select Ledger --</option>
+                {% for ledger in ledgers_450_list %}
+                    <option value="{{ ledger.id }}"
+                            {% if selected_ledger_id == ledger.id %}selected{% endif %}>
+                        {{ ledger.name }}
+                    </option>
+                {% empty %}
+                    <option value="">No 450* ledgers found for this ULB</option>
+                {% endfor %}
+            </select>
+
+            {# As on date #}
+            <label style="font-size:12px; color:#9ca3af; margin-top:4px;">
+                As on Date
+            </label>
+            <input type="date"
+                   name="as_on_date"
+                   value="{{ as_on_date }}"
+                   style="
+                       width:100%;
+                       padding:6px 10px;
+                       border-radius:8px;
+                       border:1px solid rgba(148,163,184,0.8);
+                       background:#020617;
+                       color:#e5e7eb;
+                       font-size:13px;
+                   ">
+
+            {# Balance as on date #}
+            <label style="font-size:12px; color:#9ca3af; margin-top:4px;">
+                Balance as on Date
+            </label>
+            <input type="text"
+                   name="balance_as_on"
+                   value="{{ balance_as_on }}"
+                   readonly
+                   style="
+                       width:100%;
+                       padding:6px 10px;
+                       border-radius:8px;
+                       border:1px solid rgba(55,65,81,0.9);
+                       background:#020617;
+                       color:#e5e7eb;
+                       font-size:13px;
+                   ">
+
+            {# Ratio boxes #}
+            <div style="margin-top:6px; padding:8px 10px; border-radius:8px; border:1px solid rgba(55,65,81,0.9);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:12px; color:#e5e7eb;">
+                        Ratio Allocation
+                    </span>
+                    <button type="button"
+                            onclick="autoSplitRatio()"
+                            style="
+                                padding:2px 8px;
+                                border-radius:999px;
+                                border:1px solid rgba(56,189,248,0.9);
+                                background:transparent;
+                                color:#38bdf8;
+                                font-size:10px;
+                                cursor:pointer;
+                            ">
+                        Auto Split
+                    </button>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <div style="display:flex; justify-content:space-between; gap:4px;">
+                        <label style="font-size:11px; color:#9ca3af; flex:1;">
+                            40% - Untied
+                        </label>
+                        <input type="text"
+                               name="ratio_untied"
+                               value="{{ ratio_untied }}"
+                               style="
+                                   width:120px;
+                                   padding:4px 8px;
+                                   border-radius:6px;
+                                   border:1px solid rgba(148,163,184,0.8);
+                                   background:#020617;
+                                   color:#e5e7eb;
+                                   font-size:12px;
+                                   text-align:right;
+                               ">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; gap:4px;">
+                        <label style="font-size:11px; color:#9ca3af; flex:1;">
+                            30% - SWM
+                        </label>
+                        <input type="text"
+                               name="ratio_swm"
+                               value="{{ ratio_swm }}"
+                               style="
+                                   width:120px;
+                                   padding:4px 8px;
+                                   border-radius:6px;
+                                   border:1px solid rgba(148,163,184,0.8);
+                                   background:#020617;
+                                   color:#e5e7eb;
+                                   font-size:12px;
+                                   text-align:right;
+                               ">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; gap:4px;">
+                        <label style="font-size:11px; color:#9ca3af; flex:1;">
+                            30% - RHWR
+                        </label>
+                        <input type="text"
+                               name="ratio_rhwr"
+                               value="{{ ratio_rhwr }}"
+                               style="
+                                   width:120px;
+                                   padding:4px 8px;
+                                   border-radius:6px;
+                                   border:1px solid rgba(148,163,184,0.8);
+                                   background:#020617;
+                                   color:#e5e7eb;
+                                   font-size:12px;
+                                   text-align:right;
+                               ">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; gap:4px;">
+                        <label style="font-size:11px; color:#9ca3af; flex:1;">
+                            Interest
+                        </label>
+                        <input type="text"
+                               name="ratio_interest"
+                               value="{{ ratio_interest }}"
+                               style="
+                                   width:120px;
+                                   padding:4px 8px;
+                                   border-radius:6px;
+                                   border:1px solid rgba(148,163,184,0.8);
+                                   background:#020617;
+                                   color:#e5e7eb;
+                                   font-size:12px;
+                                   text-align:right;
+                               ">
+                    </div>
+                </div>
+            </div>
+
+            {# Buttons row: Calculate + Define #}
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button type="submit" name="sub_action" value="calc_balance"
+                        style="
+                            padding:6px 14px;
+                            border-radius:999px;
+                            border:none;
+                            background:linear-gradient(120deg,#0ea5e9,#22c55e);
+                            color:#020617;
+                            font-size:12px;
+                            letter-spacing:0.10em;
+                            text-transform:uppercase;
+                            font-weight:600;
+                            cursor:pointer;
+                        ">
+                    Calculate
+                </button>
+
+                {% if 'BTN_15TH_FC_DEFINE_LEDGER' in allowed_codes %}
+                <button type="submit" name="sub_action" value="define_ratio"
+                        style="
+                            padding:6px 14px;
+                            border-radius:999px;
+                            border:none;
+                            background:linear-gradient(120deg,#22c55e,#16a34a);
+                            color:#020617;
+                            font-size:12px;
+                            letter-spacing:0.10em;
+                            text-transform:uppercase;
+                            font-weight:600;
+                            cursor:pointer;
+                        ">
+                    Define Ledger
+                </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    {# Right: all information from DB (defined_15fc_list) #}
+    <div style="
+        flex:1;
+        background:rgba(15,23,42,0.9);
+        border-radius:12px;
+        border:1px solid rgba(55,65,81,0.9);
+        padding:14px 16px;
+        max-height:480px;
+        overflow:auto;
+    ">
+        <h3 style="font-size:15px; margin-bottom:10px; color:#e5e7eb;">
+            Already Defined 15th Finance Ledgers
+        </h3>
+
+        {% if defined_15fc_list %}
+            <table style="width:100%; border-collapse:collapse; font-size:13px; color:#e5e7eb;">
+                <thead>
+                    <tr>
+                        <th style="text-align:left; padding:6px 4px; border-bottom:1px solid rgba(55,65,81,0.9);">
+                            Ledger
+                        </th>
+                        <th style="text-align:left; padding:6px 4px; border-bottom:1px solid rgba(55,65,81,0.9);">
+                            As on Date
+                        </th>
+                        <th style="text-align:right; padding:6px 4px; border-bottom:1px solid rgba(55,65,81,0.9);">
+                            Balance
+                        </th>
+                        <th style="text-align:right; padding:6px 4px; border-bottom:1px solid rgba(55,65,81,0.9);">
+                            40% Untied
+                        </th>
+                        <th style="text-align:right; padding:6px 4px; border-bottom:1px solid rgba(55,65,81,0.9);">
+                            30% SWM
+                        </th>
+                        <th style="text-align:right; padding:6px 4px; border-bottom:1px solid rgba(55,65,81,0.9);">
+                            30% RHWR
+                        </th>
+                        <th style="text-align:right; padding:6px 4px; border-bottom:1px solid rgba(55,65,81,0.9);">
+                            Interest
+                        </th>
+                        <th style="text-align:left; padding:6px 4px; border-bottom:1px solid rgba(55,65,81,0.9);">
+                            Action
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obj in defined_15fc_list %}
+                        <tr>
+                            <td style="padding:4px 4px; border-bottom:1px solid rgba(31,41,55,0.7);">
+                                {{ obj.ledger.name }}
+                            </td>
+                            <td style="padding:4px 4px; border-bottom:1px solid rgba(31,41,55,0.7);">
+                                {{ obj.as_on_date|date:"d-m-Y" }}
+                            </td>
+                            <td class="num-indian" style="padding:4px 4px; text-align:right; border-bottom:1px solid rgba(31,41,55,0.7);">
+                                {{ obj.balance_amount }}
+                            </td>
+                            <td class="num-indian" style="padding:4px 4px; text-align:right; border-bottom:1px solid rgba(31,41,55,0.7);">
+                                {{ obj.amount_untied }}
+                            </td>
+                            <td class="num-indian" style="padding:4px 4px; text-align:right; border-bottom:1px solid rgba(31,41,55,0.7);">
+                                {{ obj.amount_swm }}
+                            </td>
+                            <td class="num-indian" style="padding:4px 4px; text-align:right; border-bottom:1px solid rgba(31,41,55,0.7);">
+                                {{ obj.amount_rhwr }}
+                            </td>
+                            <td class="num-indian" style="padding:4px 4px; text-align:right; border-bottom:1px solid rgba(31,41,55,0.7);">
+                                {{ obj.amount_interest }}
+                            </td>
+                            <td style="padding:4px 4px; border-bottom:1px solid rgba(31,41,55,0.7);">
+                                {% if 'BTN_15TH_FC_UNDO_LEDGER' in allowed_codes %}
+                                <form method="post" style="display:inline; margin:0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="undo">
+                                    <input type="hidden" name="undo_ledger_id" value="{{ obj.ledger.id }}">
+                                    <button type="submit"
+                                            style="
+                                                padding:3px 10px;
+                                                border-radius:999px;
+                                                border:1px solid rgba(248,113,113,0.9);
+                                                background:transparent;
+                                                color:#fca5a5;
+                                                font-size:11px;
+                                                cursor:pointer;
+                                            ">
+                                        Undo
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p style="font-size:13px; color:#9ca3af;">
+                No 15th FC definitions saved yet.
+            </p>
+        {% endif %}
+    </div>
+
+</div>
+
+<script>
+function formatIndianNumber(num) {
+    if (num === null || num === undefined || num === "") return "";
+    const n = Number(num);
+    if (isNaN(n)) return "";
+    const isNeg = n < 0;
+    const abs = Math.abs(n);
+    const parts = abs.toFixed(2).split(".");
+    let intPart = parts[0];
+    const decPart = parts[1];
+
+    if (intPart.length > 3) {
+        const last3 = intPart.slice(-3);
+        let rest = intPart.slice(0, -3);
+        const res = [];
+        while (rest.length > 2) {
+            res.unshift(rest.slice(-2));
+            rest = rest.slice(0, -2);
+        }
+        if (rest.length) res.unshift(rest);
+        intPart = res.join(",") + "," + last3;
+    }
+
+    let out = intPart + "." + decPart;
+    if (isNeg) out = "-" + out;
+    return out;
+}
+
+function autoSplitRatio() {
+    const balanceInput  = document.querySelector('input[name="balance_as_on"]');
+    const interestInput = document.querySelector('input[name="ratio_interest"]');
+
+    if (!balanceInput) return;
+
+    const rawBal = (balanceInput.value || '').replace(/,/g, '');
+    const bal = parseFloat(rawBal);
+    if (isNaN(bal)) {
+        alert("Balance is not a valid number.");
+        return;
+    }
+
+    let interest = 0;
+    if (interestInput && interestInput.value) {
+        const rawInt = (interestInput.value || '').replace(/,/g, '');
+        interest = parseFloat(rawInt);
+        if (isNaN(interest)) interest = 0;
+    }
+
+    const base = bal - interest;
+    if (base < 0) {
+        alert("Base amount (Balance - Interest) is negative.");
+    }
+
+    const untied = base * 0.40;
+    const swm    = base * 0.30;
+    const rhwr   = base * 0.30;
+
+    const fUntied = document.querySelector('input[name="ratio_untied"]');
+    const fSwm    = document.querySelector('input[name="ratio_swm"]');
+    const fRhwr   = document.querySelector('input[name="ratio_rhwr"]');
+
+    if (fUntied) fUntied.value = formatIndianNumber(untied);
+    if (fSwm)    fSwm.value    = formatIndianNumber(swm);
+    if (fRhwr)   fRhwr.value   = formatIndianNumber(rhwr);
+}
+
+function stripIndianFormattingBeforeSubmit(form) {
+    const names = [
+        'balance_as_on',
+        'ratio_untied',
+        'ratio_swm',
+        'ratio_rhwr',
+        'ratio_interest'
+    ];
+    names.forEach(function (name) {
+        const el = form.querySelector('input[name="' + name + '"]');
+        if (el && el.value) {
+            el.value = el.value.replace(/,/g, '');
+        }
+    });
+}
+
+function validateDefineMandatory(form) {
+    const requiredNames = [
+        'ledger_id',
+        'as_on_date',
+        'balance_as_on',
+        'ratio_untied',
+        'ratio_swm',
+        'ratio_rhwr',
+        'ratio_interest'
+    ];
+    for (let i = 0; i < requiredNames.length; i++) {
+        const name = requiredNames[i];
+        const el = form.querySelector('[name="' + name + '"]');
+        if (!el || !el.value) {
+            alert("Please fill all mandatory fields before defining ledger.");
+            if (el) el.focus();
+            return false;
+        }
+    }
+    return true;
+}
+
+function handleSubmit(form) {
+    const active = document.activeElement;
+    let subAction = null;
+    if (active && active.name === 'sub_action') {
+        subAction = active.value;
+    }
+
+    if (subAction === 'calc_balance') {
+        stripIndianFormattingBeforeSubmit(form);
+        return true;
+    }
+
+    if (subAction === 'define_ratio') {
+        if (!validateDefineMandatory(form)) {
+            return false;
+        }
+        stripIndianFormattingBeforeSubmit(form);
+        return true;
+    }
+
+    stripIndianFormattingBeforeSubmit(form);
+    return true;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const fields = [
+        'balance_as_on',
+        'ratio_untied',
+        'ratio_swm',
+        'ratio_rhwr',
+        'ratio_interest'
+    ];
+    fields.forEach(function (name) {
+        const el = document.querySelector('input[name="' + name + '"]');
+        if (!el || !el.value) return;
+        const raw = el.value.replace(/,/g, '');
+        const num = parseFloat(raw);
+        if (!isNaN(num)) {
+            el.value = formatIndianNumber(num);
+        }
+    });
+
+    // Format all right-side table numbers from DB in Indian format
+    document.querySelectorAll('td.num-indian').forEach(function (td) {
+        const raw = (td.textContent || '').replace(/,/g, '').trim();
+        if (!raw) return;
+        const num = parseFloat(raw);
+        if (!isNaN(num)) {
+            td.textContent = formatIndianNumber(num);
+        }
+    });
+});
+</script>
+
+{% endblock %}

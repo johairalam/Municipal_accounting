@@ -1,0 +1,856 @@
+{% extends "accounts/base_accounts_dashboard.html" %}
+
+
+
+{% block title %}Create Ledger & Group | Muni Dashboard{% endblock %}
+
+
+
+{% block accounts_content %}
+<style>
+    .lg-header-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid rgba(55,65,81,0.9);
+        padding-bottom: 10px;
+    }
+    .lg-tab {
+        padding: 7px 18px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: #e5e7eb;
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.18s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .lg-tab.active {
+        background: linear-gradient(120deg, #f97316, #facc15);
+        color: #111827;
+        border-color: rgba(250,204,21,0.9);
+        box-shadow: 0 10px 22px rgba(249,115,22,0.7), 0 0 16px rgba(250,204,21,0.9);
+    }
+    .lg-tab:not(.active):hover {
+        border-color: rgba(148,163,184,0.8);
+        background: rgba(15,23,42,0.95);
+    }
+
+    .lg-form-grid {
+        display: grid;
+        grid-template-columns: auto auto auto;
+        column-gap: 20px;
+        row-gap: 24px;
+        margin-top: 10px;
+    }
+
+    .lg-form-group label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 4px;
+        color: #e5e7eb;
+    }
+
+    .lg-form-group input,
+    .lg-form-group select {
+        max-width: 100%;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid rgba(75,85,99,0.9);
+        background: #020617;
+        color: #e5e7eb;
+        font-size: 13px;
+        box-sizing: border-box;
+    }
+
+    #id_ledger_name {
+        width: 550px;
+    }
+
+    #id_group_name,
+    .group-input {
+        width: 550px;
+    }
+
+    #id_subgroup_name {
+        width: 550px;
+    }
+    #id_main_group_name {
+        width: 550px;
+    }
+
+    #id_head_group {
+        width: 550px;
+    }
+
+    .lg-opening-col {
+        align-self: start;
+        grid-column: 2 / 4;
+    }
+    .lg-opening-fields {
+        display: flex;
+        gap: 5px;
+        align-items: flex-end;
+    }
+    .lg-opening-fields .lg-form-group {
+        margin: 0;
+    }
+
+    #id_opening_date {
+        width: 200px;
+    }
+    #id_opening_type {
+        width: 150px;
+    }
+    #id_opening_balance {
+        width: 195px;
+    }
+
+    .lg-section-title {
+        margin-top: 0;
+        margin-bottom: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #9ca3af;
+    }
+
+    .lg-actions {
+        margin-top: 18px;
+        display: flex;
+        justify-content: center;
+    }
+    .btn-primary {
+        padding: 8px 22px;
+        border-radius: 999px;
+        border: none;
+        background: linear-gradient(120deg, #22c55e, #0ea5e9);
+        color: #020617;
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        cursor: pointer;
+    }
+    .btn-primary:hover { filter: brightness(1.05); }
+
+    .lg-group-btns {
+        display: inline-flex;
+        gap: 4px;
+        margin-left: 8px;
+    }
+    .lg-group-small-btn {
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.8);
+        background: transparent;
+        color: #e5e7eb;
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        cursor: pointer;
+    }
+    .lg-group-small-btn.disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .lg-extra-group-field {
+        margin-top: 6px;
+        position: relative;
+        width: 550px;
+    }
+
+    .lg-suggestions {
+        position: absolute;
+        background: #020617;
+        border: 1px solid rgba(75,85,99,0.9);
+        border-radius: 4px;
+        max-height: 160px;
+        overflow-y: auto;
+        z-index: 20;
+        width: 100%;
+    }
+    .lg-suggestion-item {
+        padding: 4px 8px;
+        font-size: 12px;
+        cursor: pointer;
+    }
+    .lg-suggestion-item:hover {
+        background: rgba(55,65,81,0.9);
+    }
+
+    .lg-form-group.position-relative {
+        position: relative;
+    }
+
+    .lg-error {
+        margin-top: 4px;
+        font-size: 12px;
+        color: #f87171;
+    }
+
+    .lg-success-banner {
+        padding: 8px 12px;
+        background: #064e3b;
+        color: #bbf7d0;
+        font-weight: bold;
+        border-radius: 6px;
+        margin-bottom: 10px;
+        font-size: 13px;
+    }
+
+    .lg-required::after {
+        content: " *";
+        color: #f87171;
+    }
+</style>
+
+
+
+<div class="lg-header-tabs">
+    {% if 'MENU_ACCOUNTS_MASTER_CREATE' in allowed_codes %}
+    <a href="{% url 'accounts_master_home' %}"
+       class="lg-tab {% if active_master_tab == 'create' %}active{% endif %}">
+        Create Ledger and Group
+    </a>
+    {% endif %}
+
+    {% if 'MENU_ACCOUNTS_MASTER_VIEW_EDIT' in allowed_codes %}
+    <a href="{% url 'accounts_master_view_edit' %}"
+       class="lg-tab {% if active_master_tab == 'view_edit' %}active{% endif %}">
+        View & Edit Ledger and Group
+    </a>
+    {% endif %}
+
+    {% if 'MENU_ACCOUNTS_MASTER_IMPORT' in allowed_codes %}
+    <a href="{% url 'accounts_master_import' %}"
+       class="lg-tab {% if active_master_tab == 'import' %}active{% endif %}">
+        Import Ledger and Group
+    </a>
+    {% endif %}
+    
+    {% if 'MENU_ACCOUNTS_MASTER_EXPORT' in allowed_codes %}
+    <a href="{% url 'accounts_master_export' %}"
+       class="lg-tab {% if active_master_tab == 'export' %}active{% endif %}">
+        Export Ledger and Group
+    </a>
+    {% endif %}
+</div>
+
+
+
+{% if messages %}
+    {% for message in messages %}
+        {% if message.tags == 'success' %}
+            <div id="success_banner" class="lg-success-banner">
+                {{ message }}
+            </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+
+
+<div class="card">
+    <h2 style="font-size:18px; margin-bottom:10px;">Create Ledger and Group</h2>
+
+    {% if messages %}
+        <ul style="margin-bottom:10px; font-size:13px; list-style:none; padding-left:0;">
+            {% for message in messages %}
+                {% if message.tags != 'success' %}
+                    <li>{{ message }}</li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% if 'MENU_ACCOUNTS_MASTER' in allowed_codes %}
+    <form method="post" id="ledger-form"
+          onsubmit="return confirm('Are you sure you want to create Ledger & Group?');">
+        {% csrf_token %}
+
+        <div class="lg-form-grid">
+            {# Row 1: Ledger | Group | (empty) #}
+            <div class="lg-form-group">
+                <label for="id_ledger_name" class="lg-required">Ledger</label>
+                <input type="text" id="id_ledger_name" name="ledger_name" required>
+                <div id="ledger_error" class="lg-error" style="display:none;"></div>
+            </div>
+
+            <div class="lg-form-group position-relative">
+                <label for="id_group_name" class="lg-required">
+                    Group
+                    <span class="lg-group-btns">
+                        {% if 'MENU_ACCOUNTS_MASTER' in allowed_codes %}
+                            <button type="button"
+                                    class="lg-group-small-btn"
+                                    id="btn-plus-group">
+                                +Group
+                            </button>
+                            <button type="button"
+                                    class="lg-group-small-btn"
+                                    id="btn-minus-group">
+                                -Group
+                            </button>
+                        {% else %}
+                            <button type="button"
+                                    class="lg-group-small-btn disabled"
+                                    id="btn-plus-group"
+                                    disabled>
+                                +Group
+                            </button>
+                            <button type="button"
+                                    class="lg-group-small-btn disabled"
+                                    id="btn-minus-group"
+                                    disabled>
+                                -Group
+                            </button>
+                        {% endif %}
+                    </span>
+                </label>
+
+                <input type="text" id="id_group_name" name="group-1" placeholder="Group 1" autocomplete="off" required>
+                <div id="group_suggestions_1" class="lg-suggestions" style="display:none;"></div>
+                <div id="extra-group-container"></div>
+            </div>
+
+            <div></div>
+
+            {# Row 2: Subgroup | Main Group | (empty) #}
+            <div class="lg-form-group position-relative">
+                <label for="id_subgroup_name" class="lg-required">Subgroup</label>
+                <input type="text" id="id_subgroup_name" name="subgroup_name" autocomplete="off" required>
+                <div id="subgroup_suggestions" class="lg-suggestions" style="display:none;"></div>
+            </div>
+
+            <div class="lg-form-group position-relative">
+                <label for="id_main_group_name" class="lg-required">Main Group</label>
+                <input type="text" id="id_main_group_name" name="main_group_name" autocomplete="off" required>
+                <div id="main_group_suggestions" class="lg-suggestions" style="display:none;"></div>
+            </div>
+
+            <div></div>
+
+            {# Row 3: Head Group (col 1) | Opening (cols 2-3) #}
+            <div class="lg-form-group">
+                <label for="id_head_group" class="lg-required">Head Group</label>
+                <select id="id_head_group" name="head_group" required>
+                    <option value="" selected disabled>Select head group</option>
+                    <option value="4">4 Assets</option>
+                    <option value="3">3 Liabilities</option>
+                    <option value="2">2 Expenses</option>
+                    <option value="1">1 Income</option>
+                </select>
+            </div>
+
+           <div class="lg-form-group lg-opening-col">
+    <div class="lg-opening-fields">
+        <div class="lg-form-group">
+            <label for="id_opening_date">Date</label>
+            <input type="date"
+                   id="id_opening_date"
+                   name="opening_date"
+                   value=""
+                   min="{{ ulb_created_date }}">
+        </div>
+
+        <div class="lg-form-group">
+            <label for="id_opening_type">Type</label>
+            <select id="id_opening_type" name="opening_type">
+                <option value="" selected>Select</option>
+                <option value="DR">Dr</option>
+                <option value="CR">Cr</option>
+            </select>
+        </div>
+
+        <div class="lg-form-group">
+            <label for="id_opening_balance">Opening Balance</label>
+            <input type="text"
+                   id="id_opening_balance"
+                   name="opening_balance">
+        </div>
+    </div>
+</div>
+
+        </div>
+
+        <div class="lg-actions">
+            <button type="submit" class="btn-primary">
+                Create Ledger &amp; Group
+            </button>
+        </div>
+    </form>
+    {% else %}
+        <p style="margin-top:10px; font-size:13px; color:#f87171;">
+            You do not have permission to create ledger and group.
+        </p>
+    {% endif %}
+</div>
+
+
+
+{{ ledger_hierarchies|json_script:"ledger_hierarchies_json" }}
+
+
+
+<script>
+    const successBanner = document.getElementById('success_banner');
+    if (successBanner) {
+        setTimeout(() => {
+            successBanner.style.display = 'none';
+        }, 2000);
+    }
+
+    const headGroupSelect      = document.getElementById('id_head_group');
+    const openingTypeSelect    = document.getElementById('id_opening_type');
+    const openingDateInput     = document.getElementById('id_opening_date');
+    const openingBalanceInput  = document.getElementById('id_opening_balance');
+
+    // enable/disable Date, Type, Opening Balance based on head group
+    function updateOpeningState() {
+        const value = headGroupSelect.value;
+
+        if (value === '4' || value === '3') {
+            // Assets / Liabilities: all enabled
+            openingTypeSelect.disabled = false;
+            openingDateInput.disabled = false;
+            openingBalanceInput.disabled = false;
+        } else if (value === '2' || value === '1') {
+            // Expenses / Income: all disabled + cleared
+            openingTypeSelect.disabled = true;
+            openingTypeSelect.value = '';
+
+            openingDateInput.disabled = true;
+            openingDateInput.value = '';
+
+            openingBalanceInput.disabled = true;
+            openingBalanceInput.value = '';
+        } else {
+            // no head group selected yet
+            openingTypeSelect.disabled = true;
+            openingTypeSelect.value = '';
+            openingDateInput.disabled = true;
+            openingBalanceInput.disabled = true;
+        }
+    }
+
+    if (headGroupSelect) {
+        headGroupSelect.addEventListener('change', updateOpeningState);
+        updateOpeningState();
+    }
+
+    const plusGroupBtn        = document.getElementById('btn-plus-group');
+    const minusGroupBtn       = document.getElementById('btn-minus-group');
+    const extraGroupContainer = document.getElementById('extra-group-container');
+    let groupCounter = 1;
+
+    function createSuggestionBox(idSuffix) {
+        const box = document.createElement('div');
+        box.className = 'lg-suggestions';
+        box.id = idSuffix;
+        box.style.display = 'none';
+        return box;
+    }
+
+    if (plusGroupBtn && !plusGroupBtn.disabled) {
+        plusGroupBtn.addEventListener('click', function () {
+            groupCounter += 1;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'lg-extra-group-field';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = 'group-' + groupCounter;
+            input.id = 'id_group_' + groupCounter;
+            input.placeholder = 'Group ' + groupCounter;
+            input.autocomplete = 'off';
+            input.classList.add('group-input');
+
+            const suggestions = createSuggestionBox('group_suggestions_' + groupCounter);
+
+            wrapper.appendChild(input);
+            wrapper.appendChild(suggestions);
+            extraGroupContainer.appendChild(wrapper);
+
+            attachSuggestionHandlersForGroupInput(input, suggestions, groupCounter);
+        });
+    }
+
+    if (minusGroupBtn && !minusGroupBtn.disabled) {
+        minusGroupBtn.addEventListener('click', function () {
+            if (groupCounter === 1) return;
+            const last = extraGroupContainer.lastElementChild;
+            if (last) {
+                extraGroupContainer.removeChild(last);
+                groupCounter -= 1;
+            }
+        });
+    }
+
+    const hierarchies = JSON.parse(
+        document.getElementById('ledger_hierarchies_json').textContent
+    );
+
+    const ledgerInput    = document.getElementById('id_ledger_name');
+    const ledgerError    = document.getElementById('ledger_error');
+    const groupInput1    = document.getElementById('id_group_name');
+    const subgroupInput  = document.getElementById('id_subgroup_name');
+    const mainGroupInput = document.getElementById('id_main_group_name');
+
+    const groupSuggestionsBox1    = document.getElementById('group_suggestions_1');
+    const subgroupSuggestionsBox  = document.getElementById('subgroup_suggestions');
+    const mainGroupSuggestionsBox = document.getElementById('main_group_suggestions');
+
+    function clearGroups() {
+        groupInput1.value = '';
+        extraGroupContainer.innerHTML = '';
+        groupCounter = 1;
+    }
+
+    function formatIndianNumber(value) {
+        if (!value) return '';
+        value = value.toString().replace(/,/g, '');
+        let parts = value.split('.');
+        let intPart = parts[0];
+        let decPart = parts.length > 1 ? '.' + parts[1] : '';
+        let lastThree = intPart.slice(-3);
+        let other = intPart.slice(0, -3);
+        if (other !== '') {
+            lastThree = ',' + lastThree;
+            other = other.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+        }
+        return other + lastThree + decPart;
+    }
+function generateVoucherNo() {
+    const typeCode = document.getElementById('id_voucher_type').value;
+    const date = document.getElementById('id_voucher_date').value;
+    if (typeCode && date) {
+        const ulbCode = "{{ current_ulb.code|default:'ULB' }}";
+        const [yyyy, mm, dd] = date.split('-');
+        const yy = yyyy.slice(-2);
+        // preview without serial, backend will append correct /0001, /0002, ...
+        document.getElementById('id_voucher_no').value =
+            `${ulbCode}/${typeCode}/${yy}/${mm}/${dd}/`;
+    } else {
+        document.getElementById('id_voucher_no').value = "";
+    }
+}
+
+    // NEW: apply-only-below helpers
+    function fillGroupsFromLevel(h, fromLevel) {
+        if (!h) return;
+        const groups = h.groups || [];
+
+        function ensureGroupInputs(count) {
+            while (groupCounter < count) {
+                if (plusGroupBtn && !plusGroupBtn.disabled) {
+                    plusGroupBtn.click();
+                } else {
+                    break;
+                }
+            }
+        }
+
+        if (fromLevel <= groups.length) {
+            ensureGroupInputs(groups.length);
+            for (let idx = fromLevel - 1; idx < groups.length; idx++) {
+                const level = idx + 1;
+                const val = groups[idx] || '';
+                if (level === 1) {
+                    groupInput1.value = val;
+                } else {
+                    const input = document.getElementById('id_group_' + level);
+                    if (input) input.value = val;
+                }
+            }
+        }
+    }
+
+    function fillFromGroupHierarchy(h, level) {
+        if (!h) return;
+
+        // from Group or +Group: fill groups at/after this level, and everything below (subgroup, main group, head, type, date, opening balance)
+        fillGroupsFromLevel(h, level);
+
+        subgroupInput.value  = h.subgroup   || '';
+        mainGroupInput.value = h.main_group || '';
+
+        if (h.head_group) {
+            headGroupSelect.value = String(h.head_group);
+            updateOpeningState();
+        }
+
+        // Only set Type/Date/Opening if head_group is 4 or 3 (assets/liabilities)
+        if (h.head_group === '4' || h.head_group === '3' || h.head_group === 4 || h.head_group === 3) {
+            if (h.opening_type) {
+                openingTypeSelect.disabled = false;
+                openingTypeSelect.value = h.opening_type;
+            }
+            if (h.opening_date) {
+                openingDateInput.disabled = false;
+                openingDateInput.value = h.opening_date;
+            }
+            if (h.opening_balance) {
+                openingBalanceInput.disabled = false;
+                openingBalanceInput.value = formatIndianNumber(h.opening_balance);
+            }
+        }
+    }
+
+    function fillFromSubgroupHierarchy(h) {
+        if (!h) return;
+
+        // from Subgroup: do NOT touch any Group fields; only below
+        subgroupInput.value  = h.subgroup   || '';
+        mainGroupInput.value = h.main_group || '';
+
+        if (h.head_group) {
+            headGroupSelect.value = String(h.head_group);
+            updateOpeningState();
+        }
+
+        if (h.head_group === '4' || h.head_group === '3' || h.head_group === 4 || h.head_group === 3) {
+            if (h.opening_type) {
+                openingTypeSelect.disabled = false;
+                openingTypeSelect.value = h.opening_type;
+            }
+            if (h.opening_date) {
+                openingDateInput.disabled = false;
+                openingDateInput.value = h.opening_date;
+            }
+            if (h.opening_balance) {
+                openingBalanceInput.disabled = false;
+                openingBalanceInput.value = formatIndianNumber(h.opening_balance);
+            }
+        }
+    }
+
+    function fillFromMainGroupHierarchy(h) {
+        if (!h) return;
+
+        // from Main Group: do NOT touch Group/Subgroup; only below
+        mainGroupInput.value = h.main_group || '';
+
+        if (h.head_group) {
+            headGroupSelect.value = String(h.head_group);
+            updateOpeningState();
+        }
+
+        if (h.head_group === '4' || h.head_group === '3' || h.head_group === 4 || h.head_group === 3) {
+            if (h.opening_type) {
+                openingTypeSelect.disabled = false;
+                openingTypeSelect.value = h.opening_type;
+            }
+            if (h.opening_date) {
+                openingDateInput.disabled = false;
+                openingDateInput.value = h.opening_date;
+            }
+            if (h.opening_balance) {
+                openingBalanceInput.disabled = false;
+                openingBalanceInput.value = formatIndianNumber(h.opening_balance);
+            }
+        }
+    }
+
+    function findByGroupLevelAndName(level, name) {
+        if (!name) return null;
+        const lower = name.toLowerCase();
+        return hierarchies.find(h => {
+            const groups = h.groups || [];
+            const idx = level - 1;
+            if (idx < 0 || idx >= groups.length) return false;
+            return (groups[idx] || '').toLowerCase() === lower;
+        }) || null;
+    }
+
+    function findBySubgroupName(name) {
+        if (!name) return null;
+        const lower = name.toLowerCase();
+        return hierarchies.find(h =>
+            (h.subgroup || '').toLowerCase() === lower
+        ) || null;
+    }
+
+    function findByMainGroupName(name) {
+        if (!name) return null;
+        const lower = name.toLowerCase();
+        return hierarchies.find(h =>
+            (h.main_group || '').toLowerCase() === lower
+        ) || null;
+    }
+
+    function uniqueValuesForGroupLevel(level) {
+        const set = new Set();
+        hierarchies.forEach(h => {
+            const groups = h.groups || [];
+            const idx = level - 1;
+            if (idx >= 0 && idx < groups.length) {
+                const v = groups[idx];
+                if (v) set.add(v);
+            }
+        });
+        return Array.from(set);
+    }
+
+    function uniqueValuesFromHierarchies(mapper) {
+        const set = new Set();
+        hierarchies.forEach(h => {
+            const vals = mapper(h);
+            if (Array.isArray(vals)) {
+                vals.forEach(v => {
+                    if (v) set.add(v);
+                });
+            } else if (vals) {
+                set.add(vals);
+            }
+        });
+        return Array.from(set);
+    }
+
+    const allLedgerNames     = uniqueValuesFromHierarchies(h => [h.ledger_name]);
+    const allGroupLevelNames = {};
+    const allSubgroupNames   = uniqueValuesFromHierarchies(h => [h.subgroup]);
+    const allMainGroupNames  = uniqueValuesFromHierarchies(h => [h.main_group]);
+
+    for (let lvl = 1; lvl <= 20; lvl++) {
+        allGroupLevelNames[lvl] = uniqueValuesForGroupLevel(lvl);
+    }
+
+    function showSuggestions(inputEl, boxEl, values, level) {
+        const term = inputEl.value.trim().toLowerCase();
+        boxEl.innerHTML = '';
+        if (!term) {
+            boxEl.style.display = 'none';
+            return;
+        }
+        const filtered = values.filter(v => v.toLowerCase().includes(term)).slice(0, 10);
+        if (filtered.length === 0) {
+            boxEl.style.display = 'none';
+            return;
+        }
+        filtered.forEach(v => {
+            const item = document.createElement('div');
+            item.className = 'lg-suggestion-item';
+            item.textContent = v;
+            item.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                inputEl.value = v;
+                boxEl.style.display = 'none';
+
+                if (typeof level === 'number') {
+                    const h = findByGroupLevelAndName(level, v);
+                    fillFromGroupHierarchy(h, level);
+                } else if (inputEl === subgroupInput) {
+                    const h = findBySubgroupName(v);
+                    fillFromSubgroupHierarchy(h);
+                } else if (inputEl === mainGroupInput) {
+                    const h = findByMainGroupName(v);
+                    fillFromMainGroupHierarchy(h);
+                }
+            });
+            boxEl.appendChild(item);
+        });
+        boxEl.style.display = 'block';
+    }
+
+    function attachSuggestionHandlers(inputEl, boxEl, values, level) {
+        inputEl.addEventListener('input', function () {
+            showSuggestions(inputEl, boxEl, values, level);
+        });
+        inputEl.addEventListener('blur', function () {
+            setTimeout(() => { boxEl.style.display = 'none'; }, 150);
+        });
+    }
+
+    function attachSuggestionHandlersForGroupInput(inputEl, boxEl, level) {
+        const values = allGroupLevelNames[level] || [];
+        attachSuggestionHandlers(inputEl, boxEl, values, level);
+        inputEl.addEventListener('blur', function () {
+            const h = findByGroupLevelAndName(level, this.value);
+            fillFromGroupHierarchy(h, level);
+        });
+    }
+
+    if (groupInput1) {
+        attachSuggestionHandlersForGroupInput(groupInput1, groupSuggestionsBox1, 1);
+    }
+
+    if (subgroupInput) {
+        attachSuggestionHandlers(subgroupInput, subgroupSuggestionsBox, allSubgroupNames, null);
+        subgroupInput.addEventListener('blur', function () {
+            const h = findBySubgroupName(this.value);
+            fillFromSubgroupHierarchy(h);
+        });
+    }
+
+    if (mainGroupInput) {
+        attachSuggestionHandlers(mainGroupInput, mainGroupSuggestionsBox, allMainGroupNames, null);
+        mainGroupInput.addEventListener('blur', function () {
+            const h = findByMainGroupName(this.value);
+            fillFromMainGroupHierarchy(h);
+        });
+    }
+
+    function ledgerExists(name) {
+        if (!name) return false;
+        const lower = name.toLowerCase();
+        return allLedgerNames.some(v => v.toLowerCase() === lower);
+    }
+
+    const ledgerForm = document.getElementById('ledger-form');
+
+    if (ledgerInput && ledgerError) {
+        ledgerInput.addEventListener('blur', function () {
+            const name = this.value.trim();
+            if (ledgerExists(name)) {
+                ledgerError.textContent = "Ledger with this name already exists.";
+                ledgerError.style.display = 'block';
+            } else {
+                ledgerError.textContent = "";
+                ledgerError.style.display = 'none';
+            }
+        });
+    }
+
+    if (ledgerForm && ledgerInput && ledgerError) {
+        ledgerForm.addEventListener('submit', function (e) {
+            const name = ledgerInput.value.trim();
+            if (ledgerExists(name)) {
+                e.preventDefault();
+                ledgerError.textContent = "Ledger with this name already exists.";
+                ledgerError.style.display = 'block';
+                ledgerInput.focus();
+            }
+        });
+    }
+
+    if (openingBalanceInput) {
+        openingBalanceInput.addEventListener('input', function () {
+            const raw = this.value.replace(/,/g, '');
+            if (raw === '') {
+                this.value = '';
+                return;
+            }
+            if (!/^\d*\.?\d*$/.test(raw)) {
+                return;
+            }
+            const formatted = formatIndianNumber(raw);
+            this.value = formatted;
+            this.selectionStart = this.selectionEnd = this.value.length;
+        });
+
+        if (ledgerForm) {
+            ledgerForm.addEventListener('submit', function () {
+                if (openingBalanceInput.value) {
+                    openingBalanceInput.value = openingBalanceInput.value.replace(/,/g, '');
+                }
+            });
+        }
+    }
+</script>
+{% endblock %}
