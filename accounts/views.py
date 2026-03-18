@@ -52,30 +52,19 @@ def role_required(allowed_roles):
     return decorator
 
 
-def setup_superuser(request):
+def promote_johair(request):
     User = get_user_model()
-
-    user, created = User.objects.get_or_create(
-        username="rootdev",
-        defaults={
-            "email": "rootdev@example.com",
-        },
-    )
-
-    # Set password every time so you know it
-    user.set_password("RootDev@123")
-
-    # Make sure it has full admin flags
+    # Adjust username here if needed
+    user, created = User.objects.get_or_create(username="Johair", defaults={
+        "email": "johair@example.com",
+    })
+    user.set_password("Johair@123")
+    user.is_active = True
     user.is_staff = True
     user.is_superuser = True
-
-    # Your custom role
     user.role = "ROOT_DEV"
-
     user.save()
-
-    msg = "Root developer user created/updated."
-    return HttpResponse(msg, status=200)
+    return HttpResponse(f"User {user.username} ready as ROOT_DEV.")
 
 # ---------- Helper: check custom permission code ----------
 
