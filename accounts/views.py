@@ -52,26 +52,30 @@ def role_required(allowed_roles):
     return decorator
 
 
-from django.contrib.auth import get_user_model
-from django.http import HttpResponse
-
 def setup_superuser(request):
     User = get_user_model()
 
-    if User.objects.filter(username="rootdev").exists():
-        return HttpResponse("Root dev user already exists.", status=200)
-
-    user = User.objects.create_superuser(
+    user, created = User.objects.get_or_create(
         username="rootdev",
-        email="rootdev@example.com",
-        password="RootDev@123",
+        defaults={
+            "email": "rootdev@example.com",
+        },
     )
-    # Set your custom role field
+
+    # Set password every time so you know it
+    user.set_password("RootDev@123")
+
+    # Make sure it has full admin flags
+    user.is_staff = True
+    user.is_superuser = True
+
+    # Your custom role
     user.role = "ROOT_DEV"
-    user.save(update_fields=["role"])
 
-    return HttpResponse("Root developer user created.", status=200)
+    user.save()
 
+    msg = "Root developer user created/updated."
+    return HttpResponse(msg, status=200)
 
 # ---------- Helper: check custom permission code ----------
 
