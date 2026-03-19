@@ -6,7 +6,7 @@ from .views import create_user_view, login_view, show_bank_entry_view, transacti
 urlpatterns = [
     # main router
     path('', views.dashboard, name='dashboard'),
-    path("login/", login_view, name="login"),
+    path("accounts/login/", login_view, name="login"),
     path('root-dashboard/', views.root_developer_dashboard, name='root_dashboard'),
     path('developer-dashboard/', views.developer_dashboard, name='developer_dashboard'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
