@@ -33,19 +33,7 @@ from django.db.models import F, Q, Min
 from django.contrib.auth.forms import AuthenticationForm
 # ---------- Role decorator ----------
 
-def role_required(allowed_roles):
-    """
-    allowed_roles: list of role codes, e.g. ['ROOT_DEV', 'DEV']
-    """
-    def decorator(view_func):
-        def _wrapped(request, *args, **kwargs):
-            if not request.user.is_authenticated:
-                return redirect('login')
-            if getattr(request.user, 'role', None) not in allowed_roles:
-                return HttpResponseForbidden("Not allowed")
-            return view_func(request, *args, **kwargs)
-        return _wrapped
-    return decorator
+
 
 
 # ---------- Helper: check custom permission code ----------
