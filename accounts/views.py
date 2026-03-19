@@ -31,11 +31,6 @@ from django.db import transaction
 from .models import (Transaction, TransactionEntry, ReceiptUCDetails, PaymentVendorDetails, ULB, Ledger, VoucherType,)
 from django.db.models import F, Q, Min    
 from django.contrib.auth.forms import AuthenticationForm
-
-
-
-
-
 # ---------- Role decorator ----------
 
 def role_required(allowed_roles):
