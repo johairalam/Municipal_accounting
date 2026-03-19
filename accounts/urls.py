@@ -11,6 +11,7 @@ urlpatterns = [
     path('developer-dashboard/', views.developer_dashboard, name='developer_dashboard'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('user-dashboard/', views.user_dashboard, name='user_dashboard'),
+
     path('create-ulb/', views.create_ulb, name='create_ulb'),
     path('open-ulb/', views.open_ulb, name='open_ulb'),
     path('view-ulb/', views.view_ulb, name='view_ulb'),

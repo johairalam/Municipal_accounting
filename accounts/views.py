@@ -51,48 +51,11 @@ def role_required(allowed_roles):
         return _wrapped
     return decorator
 
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
-
-@login_required
-def debug_django_perms(request):
-    user = request.user
-    data = [
-        f"User: {user.username}",
-        f"is_staff: {user.is_staff}",
-        f"is_superuser: {user.is_superuser}",
-        f"has perm accounts.add_user: {user.has_perm('accounts.add_user')}",
-        f"has perm accounts.change_user: {user.has_perm('accounts.change_user')}",
-        f"has perm accounts.view_user: {user.has_perm('accounts.view_user')}",
-    ]
-    return HttpResponse("<br>".join(data))
-
-
-def promote_johair(request):
-    User = get_user_model()
-    user, created = User.objects.get_or_create(username="Johair", defaults={
-        "email": "johair@example.com",
-    })
-    user.set_password("Aalam@123")  # set password
-    user.is_active = True
-    user.is_staff = True
-    user.is_superuser = True
-    user.role = "ROOT_DEV"
-    user.save()
-    return HttpResponse(f"User {user.username} ready as ROOT_DEV.")
 
 # ---------- Helper: check custom permission code ----------
-def login_view(request):
-    if request.method == "POST":
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            login(request, user)
-            return redirect("/")  # or your main dashboard
-    else:
-        form = AuthenticationForm(request)
 
-    return render(request, "accounts/login.html", {"form": form})
+def user_has_code(request, code):
+    return UserPermission.objects.filter(user=request.user, code=code).exists()
 
 
 # ---------- Helper: render with permissions + section ----------
@@ -107,6 +70,22 @@ def render_dashboard(request, template_name, context=None, active_section='dashb
     context.setdefault('allowed_codes', allowed_codes)
     context.setdefault('active_section', active_section)
     return render(request, template_name, context)
+
+
+# ---------- Login view (common for all roles) ----------
+
+def login_view(request):
+    if request.method == "POST":
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            # Always send to the dashboard router
+            return redirect('dashboard')
+    else:
+        form = AuthenticationForm(request)
+
+    return render(request, "accounts/login.html", {"form": form})
 
 
 # ---------- Dashboard router ----------
@@ -167,6 +146,7 @@ def user_dashboard(request):
         active_section='dashboard',
     )
 
+
 # ---------- Change password ----------
 
 @login_required
@@ -188,7 +168,6 @@ def change_password(request):
         {'form': form},
         active_section='dashboards',
     )
-
 # ------------------------- ULB: create------------------------------
 @login_required
 @role_required(['ROOT_DEV', 'DEV'])
