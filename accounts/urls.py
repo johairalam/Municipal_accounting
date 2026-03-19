@@ -73,8 +73,7 @@ urlpatterns = [
     path("reports/uc-report/<int:util_id>/undo/", uc_undo_last, name="uc_undo_last"),
     path("uc/report/<int:util_id>/export-excel/",views.uc_report_export_excel,name="uc_report_export_excel"),
     path("reports/utilization-certificate/btc42a/", views.uc_btc42a_form, name="uc_btc42a_form"),
-    path("promote-johair/", views.promote_johair, name="promote_johair"),
-    path("debug-django-perms/", views.debug_django_perms, name="debug_django_perms"),
+    
 
 
 ]
