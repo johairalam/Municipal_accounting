@@ -46,3 +46,10 @@ http://127.0.0.1:8000/
 Johair
 Aalam@123
 
+
+git status
+git add .
+git commit -m "Update login routing and ROOT_DEV dashboards"
+git push origin main
+
+
