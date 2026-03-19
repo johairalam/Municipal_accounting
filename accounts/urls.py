@@ -1,7 +1,7 @@
 from zipfile import Path
 from django.urls import path
 from . import views
-from .views import create_user_view, login_view, show_bank_entry_view, transaction_duplicate, uc_prepared, uc_undo_last, ulb_wise_report_view
+from .views import create_user_view, show_bank_entry_view, transaction_duplicate, uc_prepared, uc_undo_last, ulb_wise_report_view
 
 urlpatterns = [
     # main router
