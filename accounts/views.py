@@ -35,6 +35,7 @@ from django.contrib.auth.forms import AuthenticationForm
 
 
 
+
 # ---------- Role decorator ----------
 
 def role_required(allowed_roles):
@@ -70,22 +71,6 @@ def render_dashboard(request, template_name, context=None, active_section='dashb
     context.setdefault('allowed_codes', allowed_codes)
     context.setdefault('active_section', active_section)
     return render(request, template_name, context)
-
-
-# ---------- Login view (common for all roles) ----------
-
-def login_view(request):
-    if request.method == "POST":
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            login(request, user)
-            # Always send to the dashboard router
-            return redirect('dashboard')
-    else:
-        form = AuthenticationForm(request)
-
-    return render(request, "accounts/login.html", {"form": form})
 
 
 # ---------- Dashboard router ----------
@@ -145,7 +130,6 @@ def user_dashboard(request):
         'dashboards/base_root_dashboard.html',
         active_section='dashboard',
     )
-
 
 # ---------- Change password ----------
 
